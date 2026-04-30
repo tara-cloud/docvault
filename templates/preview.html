@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+{% block title %}{{ doc.display_name }} — DocVault{% endblock %}
+
+{% block content %}
+
+<div class="d-flex align-items-center gap-2 mb-4">
+  <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
+    <i class="bi bi-arrow-left"></i>
+  </a>
+  <h4 class="mb-0 text-truncate">{{ doc.display_name }}</h4>
+</div>
+
+<div class="row g-4">
+
+  {# --- Preview panel --- #}
+  <div class="col-12 col-lg-8">
+    <div class="card border-secondary h-100">
+      <div class="card-header py-2 text-muted small">Preview</div>
+      <div class="card-body p-2 preview-area">
+        {% if doc.mime_type == 'application/pdf' %}
+          <embed
+            src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
+            type="application/pdf"
+            class="w-100 h-100"
+            style="min-height: 70vh; border: none;"
+          />
+        {% elif doc.mime_type in ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] %}
+          <div class="text-center p-3">
+            <img
+              src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
+              class="img-fluid rounded"
+              alt="{{ doc.display_name }}"
+              style="max-height: 70vh;"
+            />
+          </div>
+        {% else %}
+          <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 30vh;">
+            <i class="bi bi-file-earmark-word text-secondary" style="font-size: 4rem;"></i>
+            <p class="text-muted mt-3">Preview not available for {{ doc.file_ext[1:] | upper }} files.</p>
+            <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-primary mt-2">
+              <i class="bi bi-download"></i> Download to View
+            </a>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  {# --- Metadata sidebar --- #}
+  <div class="col-12 col-lg-4">
+    <div class="card border-secondary">
+      <div class="card-body">
+
+        <div class="d-flex align-items-center gap-2 mb-3">
+          <i class="bi bi-{{ doc.category_icon }} text-primary fs-5"></i>
+          <span class="badge bg-secondary">{{ doc.category_name }}</span>
+          {% if doc.expiry_status == 'expired' %}
+            <span class="badge bg-dark">Expired</span>
+          {% elif doc.expiry_status == 'expiring-soon' %}
+            <span class="badge bg-danger expiry-pulse">{{ doc.days_until_expiry }}d left</span>
+          {% elif doc.expiry_status == 'expiry-warning' %}
+            <span class="badge bg-warning text-dark">{{ doc.days_until_expiry }}d left</span>
+          {% endif %}
+        </div>
+
+        {% if doc.description %}
+          <p class="text-muted small mb-3">{{ doc.description }}</p>
+        {% endif %}
+
+        {% if doc.tags_list %}
+          <div class="mb-3 d-flex flex-wrap gap-1">
+            {% for tag in doc.tags_list %}
+              <a href="{{ url_for('dashboard', tag=tag) }}" class="badge bg-secondary text-decoration-none">{{ tag }}</a>
+            {% endfor %}
+          </div>
+        {% endif %}
+
+        <ul class="list-unstyled small text-muted mb-4">
+          <li class="mb-1">
+            <i class="bi bi-file-earmark me-1"></i>
+            <strong>Type:</strong> {{ doc.file_ext[1:] | upper }}
+          </li>
+          <li class="mb-1">
+            <i class="bi bi-hdd me-1"></i>
+            <strong>Size:</strong> {{ doc.file_size_human }}
+          </li>
+          <li class="mb-1">
+            <i class="bi bi-calendar-plus me-1"></i>
+            <strong>Uploaded:</strong> {{ doc.uploaded_at[:10] }}
+          </li>
+          {% if doc.expiry_date %}
+            <li class="mb-1">
+              <i class="bi bi-calendar-x me-1"></i>
+              <strong>Expires:</strong> {{ doc.expiry_date }}
+            </li>
+          {% endif %}
+        </ul>
+
+        <div class="d-grid gap-2">
+          <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-primary">
+            <i class="bi bi-download"></i> Download
+          </a>
+          <a href="{{ url_for('doc_edit_get', doc_id=doc.id) }}" class="btn btn-outline-secondary">
+            <i class="bi bi-pencil"></i> Edit Details
+          </a>
+          <form method="POST" action="{{ url_for('doc_delete', doc_id=doc.id) }}"
+                onsubmit="return confirm('Delete \'{{ doc.display_name }}\'? This cannot be undone.')">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-outline-danger w-100">
+              <i class="bi bi-trash"></i> Delete
+            </button>
+          </form>
+        </div>
+
+      </div>
+    </div>
+  </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}Sign In — DocVault{% endblock %}
+
+{% block navbar %}{% endblock %}
+
+{% block content %}
+<div class="d-flex justify-content-center align-items-center" style="min-height: 90vh;">
+  <div class="card shadow-lg border-secondary" style="width: 100%; max-width: 400px;">
+    <div class="card-body p-5">
+      <div class="text-center mb-4">
+        <i class="bi bi-safe2-fill text-primary" style="font-size: 3rem;"></i>
+        <h2 class="mt-2 fw-bold">DocVault</h2>
+        <p class="text-muted small">Your personal document vault</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('login_post') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="mb-3">
+          <label for="password" class="form-label">Password</label>
+          <input
+            type="password"
+            id="password"
+            name="password"
+            class="form-control"
+            placeholder="Enter your password"
+            autofocus
+            required
+          />
+        </div>
+        <button type="submit" class="btn btn-primary w-100">
+          <i class="bi bi-unlock"></i> Sign In
+        </button>
+      </form>
+    </div>
+  </div>
+</div>
+{% endblock %}

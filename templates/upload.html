@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+{% block title %}Upload Document — DocVault{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center">
+  <div class="col-12 col-lg-8">
+
+    <div class="d-flex align-items-center gap-2 mb-4">
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
+        <i class="bi bi-arrow-left"></i>
+      </a>
+      <h3 class="mb-0">Upload Document</h3>
+    </div>
+
+    <div class="card border-secondary">
+      <div class="card-body p-4">
+        <form method="POST" action="{{ url_for('upload_post') }}" enctype="multipart/form-data">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+          <div class="mb-3">
+            <label for="file" class="form-label fw-semibold">File <span class="text-danger">*</span></label>
+            <input
+              type="file"
+              id="file"
+              name="file"
+              class="form-control"
+              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx"
+              required
+            />
+            <div class="form-text">Supported: PDF, PNG, JPG, GIF, WEBP, DOCX &mdash; max 50 MB</div>
+          </div>
+
+          <div class="mb-3">
+            <label for="display_name" class="form-label fw-semibold">Document Name <span class="text-danger">*</span></label>
+            <input
+              type="text"
+              id="display_name"
+              name="display_name"
+              class="form-control"
+              placeholder="e.g. Passport, Health Insurance Card"
+              required
+            />
+          </div>
+
+          <div class="mb-3">
+            <label for="description" class="form-label fw-semibold">Description</label>
+            <textarea
+              id="description"
+              name="description"
+              class="form-control"
+              rows="2"
+              placeholder="Optional notes about this document"
+            ></textarea>
+          </div>
+
+          <div class="row g-3 mb-3">
+            <div class="col-md-6">
+              <label for="category_id" class="form-label fw-semibold">Category</label>
+              <select id="category_id" name="category_id" class="form-select">
+                {% for cat in categories %}
+                  <option value="{{ cat.id }}" {% if cat.slug == 'other' %}selected{% endif %}>
+                    {{ cat.name }}
+                  </option>
+                {% endfor %}
+              </select>
+            </div>
+            <div class="col-md-6">
+              <label for="expiry_date" class="form-label fw-semibold">Expiry Date</label>
+              <input
+                type="date"
+                id="expiry_date"
+                name="expiry_date"
+                class="form-control"
+              />
+              <div class="form-text">For ID cards, licenses, insurance, etc.</div>
+            </div>
+          </div>
+
+          <div class="mb-4">
+            <label for="tag-text" class="form-label fw-semibold">Tags</label>
+            <div class="tag-input-box" id="tag-box">
+              <input type="hidden" name="tags" id="tags-hidden" />
+              <input
+                type="text"
+                id="tag-text"
+                class="tag-input-real"
+                placeholder="Type a tag and press Enter or comma…"
+                autocomplete="off"
+              />
+            </div>
+            <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag to add it.</div>
+          </div>
+
+          <div class="d-flex gap-2">
+            <button type="submit" class="btn btn-primary">
+              <i class="bi bi-cloud-upload"></i> Upload Document
+            </button>
+            <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
+          </div>
+        </form>
+      </div>
+    </div>
+
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto-fill document name from filename
+  document.getElementById('file').addEventListener('change', function () {
+    const nameField = document.getElementById('display_name');
+    if (this.files.length && !nameField.value) {
+      nameField.value = this.files[0].name.replace(/\.[^.]+$/, '');
+    }
+  });
+
+  // Tag chip widget
+  (function () {
+    const box    = document.getElementById('tag-box');
+    const input  = document.getElementById('tag-text');
+    const hidden = document.getElementById('tags-hidden');
+    const tags   = [];
+
+    function renderChips() {
+      box.querySelectorAll('.tag-chip').forEach(el => el.remove());
+      tags.forEach((tag, i) => {
+        const chip = document.createElement('span');
+        chip.className = 'tag-chip';
+        chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
+        chip.querySelector('button').addEventListener('click', () => {
+          tags.splice(i, 1);
+          renderChips();
+          syncHidden();
+        });
+        input.before(chip);
+      });
+    }
+
+    function syncHidden() {
+      hidden.value = tags.join(',');
+    }
+
+    function addTag(raw) {
+      const val = raw.trim().toLowerCase();
+      if (val && !tags.includes(val)) {
+        tags.push(val);
+        renderChips();
+        syncHidden();
+      }
+      input.value = '';
+    }
+
+    input.addEventListener('keydown', function (e) {
+      if (e.key === 'Enter' || e.key === ',') {
+        e.preventDefault();
+        addTag(this.value);
+      } else if (e.key === 'Backspace' && this.value === '' && tags.length) {
+        tags.pop();
+        renderChips();
+        syncHidden();
+      }
+    });
+
+    input.addEventListener('blur', function () {
+      if (this.value.trim()) addTag(this.value);
+    });
+  })();
+</script>
+{% endblock %}

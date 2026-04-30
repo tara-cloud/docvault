@@ -1,0 +1,86 @@
+/* DocVault — custom styles on top of Bootstrap 5 dark theme */
+
+/* Document cards */
+.doc-card {
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.doc-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Expiry pulse animation for soon-expiring docs */
+@keyframes expiry-pulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.55; }
+}
+.expiry-pulse {
+  animation: expiry-pulse 1.8s ease-in-out infinite;
+}
+
+/* Preview area fills card height */
+.preview-area {
+  min-height: 400px;
+  display: flex;
+  flex-direction: column;
+}
+.preview-area > * {
+  flex: 1;
+}
+
+/* Tighter table in categories */
+.table td, .table th {
+  vertical-align: middle;
+}
+
+/* Tag chip input */
+.tag-input-box {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  min-height: 42px;
+  padding: 6px 10px;
+  background-color: var(--bs-body-bg);
+  border: 1px solid var(--bs-border-color);
+  border-radius: var(--bs-border-radius);
+  cursor: text;
+  transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+}
+.tag-input-box:focus-within {
+  border-color: #86b7fe;
+  box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
+}
+.tag-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  background-color: #1a73e8;
+  color: #fff;
+  border-radius: 12px;
+  font-size: 0.8rem;
+  white-space: nowrap;
+}
+.tag-chip button {
+  background: none;
+  border: none;
+  color: rgba(255,255,255,0.75);
+  padding: 0;
+  line-height: 1;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.tag-chip button:hover {
+  color: #fff;
+}
+.tag-input-real {
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--bs-body-color);
+  min-width: 120px;
+  flex: 1;
+  font-size: 0.875rem;
+  padding: 0;
+}

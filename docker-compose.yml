@@ -1,0 +1,70 @@
+name: docvault
+services:
+    docvault:
+        container_name: docvault
+        image: pmananthu/docvault:latest
+        labels:
+            icon: http://192.168.0.107:9091/static/icon.png
+        networks:
+            default: null
+        ports:
+            - target: 9091
+              published: "9091"
+              protocol: tcp
+        restart: unless-stopped
+        environment:
+            - APP_PASSWORD=changeme
+            - SECRET_KEY=change-this-to-a-long-random-string
+            - DB_PATH=/data/docvault.db
+            - UPLOAD_DIR=/data/uploads
+        volumes:
+            - type: bind
+              source: /DATA/AppData/docvault
+              target: /data
+        x-casaos:
+            envs:
+                - container: APP_PASSWORD
+                  description:
+                    en_us: App login password
+                - container: SECRET_KEY
+                  description:
+                    en_us: Flask session secret key (set a long random string)
+            ports:
+                - container: "9091"
+                  description:
+                    en_us: DocVault Web UI Port
+            volumes:
+                - container: /data
+                  description:
+                    en_us: DocVault data directory (database and uploads)
+networks:
+    default:
+        name: docvault_default
+x-casaos:
+    architectures:
+        - amd64
+        - arm64
+        - arm
+    author: pmananthu
+    category: Productivity
+    description:
+        en_us: |
+            DocVault is a personal document vault for your home cloud.
+            Upload, preview and manage your important documents — ID cards,
+            insurance, medical records, passports and more.
+
+            **Key Features:**
+            - Upload PDF, images and documents (up to 50 MB)
+            - In-browser preview for PDFs and images
+            - Organize with categories and tags
+            - Expiry reminders for IDs, licenses and insurance
+            - Password-protected single-user access
+    icon: http://192.168.0.107:9091/static/icon.png
+    tagline:
+        en_us: Store, preview and track your important documents
+    thumbnail: ""
+    title:
+        en_us: DocVault
+    port_map: "9091"
+    scheme: http
+    index: /

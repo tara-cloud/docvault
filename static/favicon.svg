@@ -1,0 +1,19 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <!-- Background circle -->
+  <circle cx="50" cy="50" r="48" fill="#0d6efd"/>
+  <!-- Safe body -->
+  <rect x="20" y="25" width="60" height="55" rx="6" fill="white" opacity="0.95"/>
+  <!-- Safe door outline -->
+  <rect x="25" y="30" width="50" height="45" rx="4" fill="none" stroke="#0d6efd" stroke-width="2"/>
+  <!-- Dial / handle -->
+  <circle cx="50" cy="52" r="10" fill="#0d6efd"/>
+  <circle cx="50" cy="52" r="6"  fill="white"/>
+  <circle cx="50" cy="52" r="2"  fill="#0d6efd"/>
+  <!-- Dial tick marks -->
+  <line x1="50" y1="42" x2="50" y2="45" stroke="white" stroke-width="2"/>
+  <line x1="50" y1="59" x2="50" y2="62" stroke="white" stroke-width="2"/>
+  <line x1="40" y1="52" x2="43" y2="52" stroke="white" stroke-width="2"/>
+  <line x1="57" y1="52" x2="60" y2="52" stroke="white" stroke-width="2"/>
+  <!-- Handle bar -->
+  <rect x="68" y="48" width="4" height="8" rx="2" fill="#0d6efd"/>
+</svg>
