@@ -7,38 +7,45 @@
   <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
     <i class="bi bi-arrow-left"></i>
   </a>
-  <h4 class="mb-0 text-truncate">{{ doc.display_name }}</h4>
+  <h5 class="mb-0 fw-semibold text-truncate">{{ doc.display_name }}</h5>
 </div>
 
 <div class="row g-4">
 
-  {# --- Preview panel --- #}
+  {# ── Preview panel ── #}
   <div class="col-12 col-lg-8">
-    <div class="card border-secondary h-100">
-      <div class="card-header py-2 text-muted small">Preview</div>
-      <div class="card-body p-2 preview-area">
+    <div class="card h-100">
+      <div class="card-header d-flex align-items-center justify-content-between py-2 px-3">
+        <span class="small fw-semibold" style="color:var(--dv-muted)">Preview</span>
+        <a href="{{ url_for('doc_download', doc_id=doc.id) }}"
+           class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+          <i class="bi bi-download"></i> Download
+        </a>
+      </div>
+      <div class="card-body p-0 preview-area">
         {% if doc.mime_type == 'application/pdf' %}
-          <embed
-            src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
-            type="application/pdf"
-            class="w-100 h-100"
-            style="min-height: 70vh; border: none;"
-          />
+          <embed src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
+                 type="application/pdf"
+                 style="width:100%; height:75vh; border:none; display:block;" />
         {% elif doc.mime_type in ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] %}
-          <div class="text-center p-3">
-            <img
-              src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
-              class="img-fluid rounded"
-              alt="{{ doc.display_name }}"
-              style="max-height: 70vh;"
-            />
+          <div class="d-flex align-items-center justify-content-center p-4"
+               style="min-height:50vh; background:var(--dv-surface-2)">
+            <img src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
+                 class="img-fluid rounded-3 shadow"
+                 alt="{{ doc.display_name }}"
+                 style="max-height:70vh; object-fit:contain;" />
           </div>
         {% else %}
-          <div class="d-flex flex-column align-items-center justify-content-center" style="min-height: 30vh;">
-            <i class="bi bi-file-earmark-word text-secondary" style="font-size: 4rem;"></i>
-            <p class="text-muted mt-3">Preview not available for {{ doc.file_ext[1:] | upper }} files.</p>
-            <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-primary mt-2">
-              <i class="bi bi-download"></i> Download to View
+          <div class="d-flex flex-column align-items-center justify-content-center gap-3"
+               style="min-height:40vh; background:var(--dv-surface-2)">
+            <div style="width:72px;height:72px;background:var(--dv-surface);border:1px solid var(--dv-border);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem;">
+              <i class="bi bi-file-earmark-word" style="color:#58a6ff"></i>
+            </div>
+            <p class="mb-0 small" style="color:var(--dv-muted)">
+              No preview for {{ doc.file_ext[1:] | upper }} files
+            </p>
+            <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-primary btn-sm">
+              <i class="bi bi-download me-1"></i>Download to View
             </a>
           </div>
         {% endif %}
@@ -46,16 +53,20 @@
     </div>
   </div>
 
-  {# --- Metadata sidebar --- #}
+  {# ── Sidebar ── #}
   <div class="col-12 col-lg-4">
-    <div class="card border-secondary">
-      <div class="card-body">
+    <div class="card preview-sidebar">
+      <div class="card-body p-4">
 
-        <div class="d-flex align-items-center gap-2 mb-3">
-          <i class="bi bi-{{ doc.category_icon }} text-primary fs-5"></i>
-          <span class="badge bg-secondary">{{ doc.category_name }}</span>
+        {# Category + expiry #}
+        <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
+          <span class="badge d-flex align-items-center gap-1"
+                style="background:var(--dv-surface-2);color:var(--dv-text);border:1px solid var(--dv-border);padding:5px 10px">
+            <i class="bi bi-{{ doc.category_icon }}" style="color:var(--dv-accent)"></i>
+            {{ doc.category_name }}
+          </span>
           {% if doc.expiry_status == 'expired' %}
-            <span class="badge bg-dark">Expired</span>
+            <span class="badge bg-secondary">Expired</span>
           {% elif doc.expiry_status == 'expiring-soon' %}
             <span class="badge bg-danger expiry-pulse">{{ doc.days_until_expiry }}d left</span>
           {% elif doc.expiry_status == 'expiry-warning' %}
@@ -64,49 +75,49 @@
         </div>
 
         {% if doc.description %}
-          <p class="text-muted small mb-3">{{ doc.description }}</p>
+          <p class="small mb-3" style="color:var(--dv-muted)">{{ doc.description }}</p>
         {% endif %}
 
         {% if doc.tags_list %}
-          <div class="mb-3 d-flex flex-wrap gap-1">
+          <div class="d-flex flex-wrap gap-1 mb-3">
             {% for tag in doc.tags_list %}
-              <a href="{{ url_for('dashboard', tag=tag) }}" class="badge bg-secondary text-decoration-none">{{ tag }}</a>
+              <a href="{{ url_for('dashboard', tag=tag) }}"
+                 class="text-decoration-none"
+                 style="font-size:0.75rem;padding:3px 10px;background:#162033;color:#79b8ff;border:1px solid #1e3a5f;border-radius:20px">
+                {{ tag }}
+              </a>
             {% endfor %}
           </div>
         {% endif %}
 
-        <ul class="list-unstyled small text-muted mb-4">
-          <li class="mb-1">
-            <i class="bi bi-file-earmark me-1"></i>
-            <strong>Type:</strong> {{ doc.file_ext[1:] | upper }}
+        <hr class="my-3">
+
+        <ul class="list-unstyled small mb-4" style="color:var(--dv-muted)">
+          <li class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-file-earmark" style="width:16px"></i>
+            <span>{{ doc.file_ext[1:] | upper }} &bull; {{ doc.file_size_human }}</span>
           </li>
-          <li class="mb-1">
-            <i class="bi bi-hdd me-1"></i>
-            <strong>Size:</strong> {{ doc.file_size_human }}
-          </li>
-          <li class="mb-1">
-            <i class="bi bi-calendar-plus me-1"></i>
-            <strong>Uploaded:</strong> {{ doc.uploaded_at[:10] }}
+          <li class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-calendar-plus" style="width:16px"></i>
+            <span>Uploaded {{ doc.uploaded_at[:10] }}</span>
           </li>
           {% if doc.expiry_date %}
-            <li class="mb-1">
-              <i class="bi bi-calendar-x me-1"></i>
-              <strong>Expires:</strong> {{ doc.expiry_date }}
-            </li>
+          <li class="d-flex align-items-center gap-2">
+            <i class="bi bi-calendar-x" style="width:16px"></i>
+            <span>Expires {{ doc.expiry_date }}</span>
+          </li>
           {% endif %}
         </ul>
 
         <div class="d-grid gap-2">
-          <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-primary">
-            <i class="bi bi-download"></i> Download
-          </a>
-          <a href="{{ url_for('doc_edit_get', doc_id=doc.id) }}" class="btn btn-outline-secondary">
+          <a href="{{ url_for('doc_edit_get', doc_id=doc.id) }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center gap-1">
             <i class="bi bi-pencil"></i> Edit Details
           </a>
           <form method="POST" action="{{ url_for('doc_delete', doc_id=doc.id) }}"
                 onsubmit="return confirm('Delete \'{{ doc.display_name }}\'? This cannot be undone.')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-outline-danger w-100">
+            <button type="submit" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
+                    style="border:1px solid rgba(248,81,73,0.3);color:#f85149;background:var(--dv-surface-2)">
               <i class="bi bi-trash"></i> Delete
             </button>
           </form>

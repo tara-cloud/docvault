@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" data-bs-theme="dark">
+<html lang="en" data-bs-theme="{{ app_theme | default('dark') }}">
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
@@ -12,40 +12,49 @@
 </head>
 <body>
 
+{% block full_page %}
+
 {% block navbar %}
-<nav class="navbar navbar-expand-lg navbar-dark bg-dark border-bottom border-secondary">
-  <div class="container-fluid">
+<nav class="navbar navbar-expand-lg navbar-dark sticky-top">
+  <div class="container-fluid px-3">
     <a class="navbar-brand d-flex align-items-center gap-2 fw-bold" href="{{ url_for('dashboard') }}">
-      <i class="bi bi-safe2-fill text-primary fs-4"></i>DocVault
+      <i class="bi bi-safe2-fill text-primary fs-5"></i>
+      <span>DocVault</span>
     </a>
-    <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
+    <button class="navbar-toggler border-0" type="button" data-bs-toggle="collapse" data-bs-target="#navbarMain">
       <span class="navbar-toggler-icon"></span>
     </button>
     <div class="collapse navbar-collapse" id="navbarMain">
-      <ul class="navbar-nav me-auto">
+      <ul class="navbar-nav me-auto gap-1 ms-2">
         <li class="nav-item">
-          <a class="nav-link {% if request.endpoint == 'dashboard' %}active{% endif %}"
+          <a class="nav-link d-flex align-items-center gap-1 {% if request.endpoint == 'dashboard' %}active{% endif %}"
              href="{{ url_for('dashboard') }}">
-            <i class="bi bi-house-door"></i> Home
+            <i class="bi bi-grid-1x2"></i> <span>Documents</span>
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.endpoint == 'upload_get' %}active{% endif %}"
+          <a class="nav-link d-flex align-items-center gap-1 {% if request.endpoint == 'upload_get' %}active{% endif %}"
              href="{{ url_for('upload_get') }}">
-            <i class="bi bi-cloud-upload"></i> Upload
+            <i class="bi bi-cloud-upload"></i> <span>Upload</span>
           </a>
         </li>
         <li class="nav-item">
-          <a class="nav-link {% if request.endpoint == 'categories_list' %}active{% endif %}"
+          <a class="nav-link d-flex align-items-center gap-1 {% if request.endpoint == 'categories_list' %}active{% endif %}"
              href="{{ url_for('categories_list') }}">
-            <i class="bi bi-tags"></i> Categories
+            <i class="bi bi-tags"></i> <span>Categories</span>
+          </a>
+        </li>
+        <li class="nav-item">
+          <a class="nav-link d-flex align-items-center gap-1 {% if request.endpoint == 'settings_get' %}active{% endif %}"
+             href="{{ url_for('settings_get') }}">
+            <i class="bi bi-gear"></i> <span>Settings</span>
           </a>
         </li>
       </ul>
       <form method="POST" action="{{ url_for('logout') }}" class="d-flex">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <button type="submit" class="btn btn-outline-secondary btn-sm">
-          <i class="bi bi-box-arrow-right"></i> Sign Out
+        <button type="submit" class="btn btn-outline-secondary btn-sm d-flex align-items-center gap-1">
+          <i class="bi bi-box-arrow-right"></i> <span>Sign Out</span>
         </button>
       </form>
     </div>
@@ -53,28 +62,55 @@
 </nav>
 {% endblock %}
 
-<main class="container-fluid py-4 px-4">
-  {% with messages = get_flashed_messages(with_categories=true) %}
-    {% if messages %}
-      <div class="mb-3">
-        {% for category, message in messages %}
-          <div class="alert alert-{{ category }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-          </div>
-        {% endfor %}
-      </div>
-    {% endif %}
-  {% endwith %}
+{# Toast container #}
+<div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 
+{# Hidden flash data #}
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-data" class="d-none">
+      {% for category, message in messages %}
+        <span data-cat="{{ category }}" data-msg="{{ message | e }}"></span>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
+
+<main class="container-fluid py-4 px-3 px-md-4">
   {% block content %}{% endblock %}
 </main>
 
-<footer class="text-center text-muted py-3 border-top border-secondary small">
+<footer class="text-center py-3 small" style="color: var(--dv-muted); border-top: 1px solid var(--dv-border);">
   DocVault &mdash; Personal Document Vault
 </footer>
 
+{% endblock %}
+
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    document.querySelectorAll('#flash-data span').forEach(el => {
+      const cat = el.dataset.cat;
+      const msg = el.dataset.msg;
+      const icons  = { success:'check-circle-fill', danger:'x-circle-fill', warning:'exclamation-triangle-fill', info:'info-circle-fill' };
+      const colors = { success:'#3fb950', danger:'#f85149', warning:'#d29922', info:'#58a6ff' };
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast ${cat}`;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.innerHTML = `
+        <div class="toast-body d-flex align-items-start gap-2 py-3 px-3">
+          <i class="bi bi-${icons[cat]||'info-circle-fill'} mt-1 flex-shrink-0" style="color:${colors[cat]||'#58a6ff'}"></i>
+          <span class="flex-grow-1 small">${msg}</span>
+          <button type="button" class="btn-close btn-close-white btn-sm ms-1" data-bs-dismiss="toast"></button>
+        </div>`;
+      container.appendChild(toastEl);
+      new bootstrap.Toast(toastEl, { delay: 4000 }).show();
+      toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    });
+  });
+</script>
 {% block scripts %}{% endblock %}
 </body>
 </html>

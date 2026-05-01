@@ -3,40 +3,40 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-12 col-lg-8">
+  <div class="col-12 col-lg-7">
 
     <div class="d-flex align-items-center gap-2 mb-4">
       <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
       </a>
-      <h3 class="mb-0">Edit Details</h3>
+      <h5 class="mb-0 fw-semibold text-truncate">Edit &mdash; {{ doc.display_name }}</h5>
     </div>
 
-    <div class="card border-secondary">
+    <div class="card">
+      <div class="card-header py-2 px-3">
+        <span class="small fw-semibold" style="color:var(--dv-muted)">Document Details</span>
+      </div>
       <div class="card-body p-4">
         <form method="POST" action="{{ url_for('doc_edit_post', doc_id=doc.id) }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
           <div class="mb-3">
-            <label for="display_name" class="form-label fw-semibold">Document Name <span class="text-danger">*</span></label>
-            <input
-              type="text"
-              id="display_name"
-              name="display_name"
-              class="form-control"
-              value="{{ doc.display_name }}"
-              required
-            />
+            <label for="display_name" class="form-label small fw-semibold">
+              Document Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="display_name" name="display_name" class="form-control"
+                   value="{{ doc.display_name }}" required />
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label fw-semibold">Description</label>
-            <textarea id="description" name="description" class="form-control" rows="2">{{ doc.description or '' }}</textarea>
+            <label for="description" class="form-label small fw-semibold">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="2"
+                      placeholder="Optional notes…">{{ doc.description or '' }}</textarea>
           </div>
 
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label for="category_id" class="form-label fw-semibold">Category</label>
+              <label for="category_id" class="form-label small fw-semibold">Category</label>
               <select id="category_id" name="category_id" class="form-select">
                 {% for cat in categories %}
                   <option value="{{ cat.id }}" {% if cat.id == doc.category_id %}selected{% endif %}>
@@ -46,41 +46,37 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label for="expiry_date" class="form-label fw-semibold">Expiry Date</label>
-              <input
-                type="date"
-                id="expiry_date"
-                name="expiry_date"
-                class="form-control"
-                value="{{ doc.expiry_date or '' }}"
-              />
+              <label for="expiry_date" class="form-label small fw-semibold">Expiry Date</label>
+              <input type="date" id="expiry_date" name="expiry_date" class="form-control"
+                     value="{{ doc.expiry_date or '' }}" />
+              <div class="form-text">Leave blank if no expiry.</div>
             </div>
           </div>
 
           <div class="mb-4">
-            <label for="tag-text" class="form-label fw-semibold">Tags</label>
+            <label for="tag-text" class="form-label small fw-semibold">Tags</label>
             <div class="tag-input-box" id="tag-box">
               <input type="hidden" name="tags" id="tags-hidden" value="{{ doc.tags_list | join(',') }}" />
-              <input
-                type="text"
-                id="tag-text"
-                class="tag-input-real"
-                placeholder="Type a tag and press Enter or comma…"
-                autocomplete="off"
-              />
+              <input type="text" id="tag-text" class="tag-input-real"
+                     placeholder="Type a tag and press Enter or comma…" autocomplete="off" />
             </div>
-            <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag to add it.</div>
+            <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag.</div>
           </div>
 
-          <div class="alert alert-secondary small">
-            <i class="bi bi-info-circle"></i>
-            Original file: <strong>{{ doc.original_name }}</strong> ({{ doc.file_size_human }})
-            &mdash; file replacement is not supported; delete and re-upload to change the file.
+          {# File info notice #}
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-4"
+               style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
+            <i class="bi bi-info-circle" style="color:var(--dv-muted);font-size:1.1rem;flex-shrink:0"></i>
+            <p class="mb-0 small" style="color:var(--dv-muted)">
+              File: <strong style="color:var(--dv-text)">{{ doc.original_name }}</strong>
+              &bull; {{ doc.file_size_human }} &bull; {{ doc.file_ext[1:] | upper }}
+              <br>To replace the file, delete this document and re-upload.
+            </p>
           </div>
 
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-check-lg"></i> Save Changes
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-check-lg me-1"></i>Save Changes
             </button>
             <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="btn btn-outline-secondary">Cancel</a>
           </div>
@@ -94,57 +90,34 @@
 
 {% block scripts %}
 <script>
-  (function () {
-    const box    = document.getElementById('tag-box');
-    const input  = document.getElementById('tag-text');
-    const hidden = document.getElementById('tags-hidden');
-    const tags   = hidden.value ? hidden.value.split(',').map(t => t.trim()).filter(Boolean) : [];
+(function () {
+  const box    = document.getElementById('tag-box');
+  const input  = document.getElementById('tag-text');
+  const hidden = document.getElementById('tags-hidden');
+  const tags   = hidden.value ? hidden.value.split(',').map(t => t.trim()).filter(Boolean) : [];
 
-    function renderChips() {
-      box.querySelectorAll('.tag-chip').forEach(el => el.remove());
-      tags.forEach((tag, i) => {
-        const chip = document.createElement('span');
-        chip.className = 'tag-chip';
-        chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
-        chip.querySelector('button').addEventListener('click', () => {
-          tags.splice(i, 1);
-          renderChips();
-          syncHidden();
-        });
-        input.before(chip);
-      });
-    }
-
-    function syncHidden() {
-      hidden.value = tags.join(',');
-    }
-
-    function addTag(raw) {
-      const val = raw.trim().toLowerCase();
-      if (val && !tags.includes(val)) {
-        tags.push(val);
-        renderChips();
-        syncHidden();
-      }
-      input.value = '';
-    }
-
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        addTag(this.value);
-      } else if (e.key === 'Backspace' && this.value === '' && tags.length) {
-        tags.pop();
-        renderChips();
-        syncHidden();
-      }
+  function renderChips() {
+    box.querySelectorAll('.tag-chip').forEach(el => el.remove());
+    tags.forEach((tag, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
+      chip.querySelector('button').addEventListener('click', () => { tags.splice(i,1); renderChips(); syncHidden(); });
+      input.before(chip);
     });
-
-    input.addEventListener('blur', function () {
-      if (this.value.trim()) addTag(this.value);
-    });
-
-    renderChips();
-  })();
+  }
+  function syncHidden() { hidden.value = tags.join(','); }
+  function addTag(raw) {
+    const val = raw.trim().toLowerCase();
+    if (val && !tags.includes(val)) { tags.push(val); renderChips(); syncHidden(); }
+    input.value = '';
+  }
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(this.value); }
+    else if (e.key === 'Backspace' && !this.value && tags.length) { tags.pop(); renderChips(); syncHidden(); }
+  });
+  input.addEventListener('blur', function() { if (this.value.trim()) addTag(this.value); });
+  renderChips();
+})();
 </script>
 {% endblock %}

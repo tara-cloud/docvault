@@ -20,7 +20,7 @@ DB_PATH       = os.environ.get("DB_PATH", "/data/docvault.db")
 UPLOAD_DIR    = os.environ.get("UPLOAD_DIR", "/data/uploads")
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
-HASHED_PASSWORD = generate_password_hash(APP_PASSWORD)
+HASHED_PASSWORD = generate_password_hash(APP_PASSWORD)  # may be overridden from DB after init
 
 ALLOWED_EXTENSIONS = {
     ".pdf":  "application/pdf",
@@ -90,6 +90,11 @@ def init_db():
             );
 
             CREATE INDEX IF NOT EXISTS idx_docs_category ON documents(category_id);
+
+            CREATE TABLE IF NOT EXISTS settings (
+                key   TEXT PRIMARY KEY,
+                value TEXT NOT NULL
+            );
         """)
 
 
@@ -101,6 +106,40 @@ def seed_categories():
                 "INSERT INTO categories (name, slug, icon, is_default) VALUES (?, ?, ?, 1)",
                 DEFAULT_CATEGORIES,
             )
+
+
+def seed_settings():
+    with get_db() as conn:
+        conn.execute("INSERT OR IGNORE INTO settings (key, value) VALUES ('theme', 'dark')")
+
+# ---------------------------------------------------------------------------
+# Settings helpers
+# ---------------------------------------------------------------------------
+def _get_setting(key, default=None):
+    with get_db() as conn:
+        row = conn.execute("SELECT value FROM settings WHERE key=?", (key,)).fetchone()
+    return row[0] if row else default
+
+
+def _set_setting(key, value):
+    with get_db() as conn:
+        conn.execute("INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)", (key, value))
+
+
+def _reload_password_hash():
+    global HASHED_PASSWORD
+    saved = _get_setting("password_hash")
+    if saved:
+        HASHED_PASSWORD = saved
+
+
+@app.context_processor
+def inject_theme():
+    try:
+        return {"app_theme": _get_setting("theme", "dark")}
+    except Exception:
+        return {"app_theme": "dark"}
+
 
 # ---------------------------------------------------------------------------
 # Auth helpers
@@ -515,6 +554,55 @@ def category_delete(cat_id):
     return redirect(url_for("categories_list"))
 
 # ---------------------------------------------------------------------------
+# Settings
+# ---------------------------------------------------------------------------
+@app.route("/settings", methods=["GET"])
+@login_required
+def settings_get():
+    return render_template("settings.html", theme=_get_setting("theme", "dark"))
+
+
+@app.route("/settings/password", methods=["POST"])
+@login_required
+def settings_password():
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    current  = request.form.get("current_password", "")
+    new_pw   = request.form.get("new_password", "")
+    confirm  = request.form.get("confirm_password", "")
+
+    if not check_password_hash(HASHED_PASSWORD, current):
+        flash("Current password is incorrect.", "danger")
+        return redirect(url_for("settings_get"))
+    if len(new_pw) < 6:
+        flash("New password must be at least 6 characters.", "danger")
+        return redirect(url_for("settings_get"))
+    if new_pw != confirm:
+        flash("New passwords do not match.", "danger")
+        return redirect(url_for("settings_get"))
+
+    new_hash = generate_password_hash(new_pw)
+    _set_setting("password_hash", new_hash)
+    global HASHED_PASSWORD
+    HASHED_PASSWORD = new_hash
+    flash("Password updated successfully.", "success")
+    return redirect(url_for("settings_get"))
+
+
+@app.route("/settings/theme", methods=["POST"])
+@login_required
+def settings_theme():
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    theme = request.form.get("theme", "dark")
+    if theme not in ("dark", "light"):
+        theme = "dark"
+    _set_setting("theme", theme)
+    flash(f"Theme changed to {theme} mode.", "success")
+    return redirect(url_for("settings_get"))
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
@@ -522,4 +610,6 @@ if __name__ == "__main__":
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
     init_db()
     seed_categories()
+    seed_settings()
+    _reload_password_hash()
     app.run(host="0.0.0.0", port=9091, debug=False)

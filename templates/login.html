@@ -1,23 +1,37 @@
 {% extends "base.html" %}
-
 {% block title %}Sign In — DocVault{% endblock %}
 
-{% block navbar %}{% endblock %}
+{% block full_page %}
+{# Toast container for flash messages #}
+<div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
+{% with messages = get_flashed_messages(with_categories=true) %}
+  {% if messages %}
+    <div id="flash-data" class="d-none">
+      {% for category, message in messages %}
+        <span data-cat="{{ category }}" data-msg="{{ message | e }}"></span>
+      {% endfor %}
+    </div>
+  {% endif %}
+{% endwith %}
 
-{% block content %}
-<div class="d-flex justify-content-center align-items-center" style="min-height: 90vh;">
-  <div class="card shadow-lg border-secondary" style="width: 100%; max-width: 400px;">
-    <div class="card-body p-5">
-      <div class="text-center mb-4">
-        <i class="bi bi-safe2-fill text-primary" style="font-size: 3rem;"></i>
-        <h2 class="mt-2 fw-bold">DocVault</h2>
-        <p class="text-muted small">Your personal document vault</p>
+<div class="login-bg">
+  <div class="login-card">
+    <div class="text-center mb-4">
+      <div class="login-logo">
+        <i class="bi bi-safe2-fill text-primary"></i>
       </div>
+      <h4 class="fw-bold mb-1">DocVault</h4>
+      <p class="small mb-0" style="color: var(--dv-muted);">Your personal document vault</p>
+    </div>
 
-      <form method="POST" action="{{ url_for('login_post') }}">
-        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="mb-3">
-          <label for="password" class="form-label">Password</label>
+    <form method="POST" action="{{ url_for('login_post') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="mb-4">
+        <label for="password" class="form-label small fw-semibold">Password</label>
+        <div class="input-group">
+          <span class="input-group-text" style="background:var(--dv-surface-2); border-color:var(--dv-border);">
+            <i class="bi bi-lock" style="color:var(--dv-muted)"></i>
+          </span>
           <input
             type="password"
             id="password"
@@ -26,13 +40,34 @@
             placeholder="Enter your password"
             autofocus
             required
+            style="border-left: none;"
           />
+          <button type="button" class="input-group-text" id="toggle-pw"
+                  style="background:var(--dv-surface-2); border-color:var(--dv-border); cursor:pointer;">
+            <i class="bi bi-eye" style="color:var(--dv-muted)"></i>
+          </button>
         </div>
-        <button type="submit" class="btn btn-primary w-100">
-          <i class="bi bi-unlock"></i> Sign In
-        </button>
-      </form>
-    </div>
+      </div>
+      <button type="submit" class="btn btn-primary w-100 py-2">
+        <i class="bi bi-unlock me-1"></i> Sign In
+      </button>
+    </form>
   </div>
 </div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  document.getElementById('toggle-pw').addEventListener('click', function () {
+    const pw = document.getElementById('password');
+    const icon = this.querySelector('i');
+    if (pw.type === 'password') {
+      pw.type = 'text';
+      icon.className = 'bi bi-eye-slash';
+    } else {
+      pw.type = 'password';
+      icon.className = 'bi bi-eye';
+    }
+  });
+</script>
 {% endblock %}

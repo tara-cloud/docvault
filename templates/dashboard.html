@@ -3,126 +3,161 @@
 
 {% block content %}
 
-{# --- Stats row --- #}
+{# ── Stat cards ── #}
 <div class="row g-3 mb-4">
   <div class="col-sm-4">
-    <div class="card border-secondary text-center">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-primary">{{ total }}</div>
-        <div class="text-muted small">Total Documents</div>
+    <div class="card stat-card border-0">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="stat-icon" style="background:rgba(26,115,232,0.12)">
+          <i class="bi bi-file-earmark-text" style="color:#58a6ff"></i>
+        </div>
+        <div>
+          <div class="stat-value text-primary">{{ total }}</div>
+          <div class="stat-label">Total Documents</div>
+        </div>
       </div>
     </div>
   </div>
   <div class="col-sm-4">
-    <div class="card border-danger text-center">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-danger">{{ expiring_count }}</div>
-        <div class="text-muted small">Expiring (30 days)</div>
+    <div class="card stat-card border-0">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="stat-icon" style="background:rgba(248,81,73,0.12)">
+          <i class="bi bi-calendar-x" style="color:#f85149"></i>
+        </div>
+        <div>
+          <div class="stat-value" style="color:#f85149">{{ expiring_count }}</div>
+          <div class="stat-label">Expiring Soon</div>
+        </div>
       </div>
     </div>
   </div>
   <div class="col-sm-4">
-    <div class="card border-secondary text-center">
-      <div class="card-body py-3">
-        <div class="fs-2 fw-bold text-secondary">{{ expired_count }}</div>
-        <div class="text-muted small">Expired</div>
+    <div class="card stat-card border-0">
+      <div class="card-body d-flex align-items-center gap-3 py-3">
+        <div class="stat-icon" style="background:rgba(139,148,158,0.12)">
+          <i class="bi bi-clock-history" style="color:var(--dv-muted)"></i>
+        </div>
+        <div>
+          <div class="stat-value" style="color:var(--dv-muted)">{{ expired_count }}</div>
+          <div class="stat-label">Expired</div>
+        </div>
       </div>
     </div>
   </div>
 </div>
 
-{# --- Search / filter bar --- #}
-<form method="GET" action="{{ url_for('dashboard') }}" class="row g-2 mb-4 align-items-end">
-  <div class="col-12 col-md-4">
-    <input
-      type="text"
-      name="q"
-      class="form-control"
-      placeholder="Search name, description, tags…"
-      value="{{ q }}"
-    />
-  </div>
-  <div class="col-6 col-md-2">
-    <select name="category_id" class="form-select">
-      <option value="">All Categories</option>
-      {% for cat in categories %}
-        <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>
-          {{ cat.name }}
-        </option>
-      {% endfor %}
-    </select>
-  </div>
-  <div class="col-6 col-md-2">
-    <select name="expiry_filter" class="form-select">
-      <option value="" {% if not expiry_filter %}selected{% endif %}>All Documents</option>
-      <option value="expiring" {% if expiry_filter == 'expiring' %}selected{% endif %}>Expiring (90d)</option>
-      <option value="expired"  {% if expiry_filter == 'expired'  %}selected{% endif %}>Expired</option>
-    </select>
-  </div>
-  <div class="col-auto">
-    <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i> Search</button>
-  </div>
-  <div class="col-auto">
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Clear</a>
-  </div>
-  <div class="col-auto ms-auto">
-    <a href="{{ url_for('upload_get') }}" class="btn btn-success">
-      <i class="bi bi-cloud-upload"></i> Upload
-    </a>
+{# ── Search bar ── #}
+<form method="GET" action="{{ url_for('dashboard') }}" class="search-bar mb-4">
+  <div class="row g-2 align-items-center">
+    <div class="col-12 col-md">
+      <div class="input-group">
+        <span class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border);">
+          <i class="bi bi-search" style="color:var(--dv-muted)"></i>
+        </span>
+        <input type="text" name="q" class="form-control" placeholder="Search name, description, tags…" value="{{ q }}" />
+      </div>
+    </div>
+    <div class="col-6 col-md-auto">
+      <select name="category_id" class="form-select" style="min-width:140px">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+          <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div class="col-6 col-md-auto">
+      <select name="expiry_filter" class="form-select" style="min-width:150px">
+        <option value=""       {% if not expiry_filter              %}selected{% endif %}>All Documents</option>
+        <option value="expiring" {% if expiry_filter == 'expiring'  %}selected{% endif %}>Expiring (90d)</option>
+        <option value="expired"  {% if expiry_filter == 'expired'   %}selected{% endif %}>Expired</option>
+      </select>
+    </div>
+    <div class="col-auto d-flex gap-2">
+      <button type="submit" class="btn btn-primary"><i class="bi bi-search"></i></button>
+      <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary" title="Clear filters">
+        <i class="bi bi-x-lg"></i>
+      </a>
+    </div>
+    <div class="col-auto ms-md-auto">
+      <a href="{{ url_for('upload_get') }}" class="btn btn-success d-flex align-items-center gap-1">
+        <i class="bi bi-cloud-upload"></i> <span>Upload</span>
+      </a>
+    </div>
   </div>
 </form>
 
-{# --- Document grid --- #}
+{# ── Document grid ── #}
 {% if docs %}
-<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-4">
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
   {% for doc in docs %}
+  {% set dtype = 'pdf' if doc.mime_type == 'application/pdf' else ('image' if doc.mime_type.startswith('image') else ('docx' if 'word' in doc.mime_type else 'other')) %}
   <div class="col">
-    <div class="card h-100 doc-card border-secondary">
-      <div class="card-header d-flex align-items-center gap-2 py-2">
-        <i class="bi bi-{{ doc.category_icon }} text-primary"></i>
-        <span class="badge bg-secondary">{{ doc.category_name }}</span>
-        {% if doc.expiry_status == 'expired' %}
-          <span class="badge bg-dark ms-auto">Expired</span>
-        {% elif doc.expiry_status == 'expiring-soon' %}
-          <span class="badge bg-danger ms-auto expiry-pulse">{{ doc.days_until_expiry }}d left</span>
-        {% elif doc.expiry_status == 'expiry-warning' %}
-          <span class="badge bg-warning text-dark ms-auto">{{ doc.days_until_expiry }}d left</span>
-        {% endif %}
+    <div class="card h-100 doc-card" data-type="{{ dtype }}">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-{{ doc.category_icon }}" style="color:var(--dv-accent)"></i>
+        <span class="badge" style="background:var(--dv-surface-2);color:var(--dv-muted);border:1px solid var(--dv-border)">
+          {{ doc.category_name }}
+        </span>
+        <div class="ms-auto d-flex align-items-center gap-1">
+          {% if doc.expiry_status == 'expired' %}
+            <span class="badge bg-secondary">Expired</span>
+          {% elif doc.expiry_status == 'expiring-soon' %}
+            <span class="badge bg-danger expiry-pulse">{{ doc.days_until_expiry }}d</span>
+          {% elif doc.expiry_status == 'expiry-warning' %}
+            <span class="badge bg-warning text-dark">{{ doc.days_until_expiry }}d</span>
+          {% endif %}
+          <span class="badge" style="background:var(--dv-surface-2);color:var(--dv-muted);font-size:0.7rem;border:1px solid var(--dv-border)">
+            {{ doc.file_ext[1:] | upper }}
+          </span>
+        </div>
       </div>
 
-      <div class="card-body">
+      <div class="card-body pb-2">
         <h6 class="card-title fw-semibold mb-1">
-          <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="text-decoration-none text-light">
+          <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="text-decoration-none" style="color:var(--dv-text)">
             {{ doc.display_name }}
           </a>
         </h6>
         {% if doc.description %}
-          <p class="card-text text-muted small mb-2">
+          <p class="card-text small mb-2" style="color:var(--dv-muted)">
             {{ doc.description | truncate(80) }}
           </p>
         {% endif %}
-        <div class="d-flex flex-wrap gap-1 mb-2">
-          {% for tag in doc.tags_list %}
-            <a href="{{ url_for('dashboard', tag=tag) }}" class="badge bg-secondary text-decoration-none">{{ tag }}</a>
-          {% endfor %}
-        </div>
-        <div class="text-muted small">
-          <i class="bi bi-file-earmark"></i> {{ doc.file_ext[1:] | upper }} &bull;
-          {{ doc.file_size_human }}
+        {% if doc.tags_list %}
+          <div class="d-flex flex-wrap gap-1 mb-2">
+            {% for tag in doc.tags_list %}
+              <a href="{{ url_for('dashboard', tag=tag) }}"
+                 class="text-decoration-none"
+                 style="font-size:0.72rem;padding:2px 8px;background:rgba(26,115,232,0.18);color:#79b8ff;border:1px solid rgba(26,115,232,0.3);border-radius:20px">
+                {{ tag }}
+              </a>
+            {% endfor %}
+          </div>
+        {% endif %}
+        <div class="small" style="color:var(--dv-muted)">
+          <i class="bi bi-hdd me-1"></i>{{ doc.file_size_human }}
+          <span class="mx-1">&bull;</span>
+          <i class="bi bi-calendar3 me-1"></i>{{ doc.uploaded_at[:10] }}
         </div>
       </div>
 
-      <div class="card-footer d-flex gap-2 flex-wrap py-2">
-        <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="btn btn-sm btn-outline-primary flex-fill">
+      <div class="card-footer d-flex gap-2 py-2">
+        <a href="{{ url_for('doc_detail', doc_id=doc.id) }}"
+           class="btn btn-sm flex-fill d-flex align-items-center justify-content-center gap-1"
+           style="background:var(--dv-surface-2);color:var(--dv-text);border:1px solid var(--dv-border)">
           <i class="bi bi-eye"></i> View
         </a>
-        <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-sm btn-outline-secondary flex-fill">
-          <i class="bi bi-download"></i> Download
+        <a href="{{ url_for('doc_download', doc_id=doc.id) }}"
+           class="btn btn-sm flex-fill d-flex align-items-center justify-content-center gap-1"
+           style="background:var(--dv-surface-2);color:var(--dv-text);border:1px solid var(--dv-border)">
+          <i class="bi bi-download"></i>
         </a>
         <form method="POST" action="{{ url_for('doc_delete', doc_id=doc.id) }}"
               onsubmit="return confirm('Delete \'{{ doc.display_name }}\'?')">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-          <button type="submit" class="btn btn-sm btn-outline-danger">
+          <button type="submit"
+                  class="btn btn-sm"
+                  style="background:var(--dv-surface-2);color:#f85149;border:1px solid var(--dv-border)">
             <i class="bi bi-trash"></i>
           </button>
         </form>
@@ -133,24 +168,29 @@
 </div>
 
 {% else %}
-{# Empty state #}
-<div class="text-center py-5">
-  <i class="bi bi-safe2 text-secondary" style="font-size: 4rem;"></i>
-  <h4 class="mt-3 text-muted">
+<div class="empty-state">
+  <div class="empty-icon">
     {% if q or selected_category_id or expiry_filter %}
-      No documents match your search.
+      <i class="bi bi-search" style="color:var(--dv-muted)"></i>
     {% else %}
-      No documents yet.
+      <i class="bi bi-safe2" style="color:var(--dv-muted)"></i>
     {% endif %}
-  </h4>
-  {% if not (q or selected_category_id or expiry_filter) %}
-    <p class="text-muted">Upload your first document to get started.</p>
-    <a href="{{ url_for('upload_get') }}" class="btn btn-primary mt-2">
-      <i class="bi bi-cloud-upload"></i> Upload Document
-    </a>
+  </div>
+  <h5 class="fw-semibold mb-1">
+    {% if q or selected_category_id or expiry_filter %}No results found{% else %}No documents yet{% endif %}
+  </h5>
+  <p class="small mb-3" style="color:var(--dv-muted)">
+    {% if q or selected_category_id or expiry_filter %}
+      Try adjusting your search or filters.
+    {% else %}
+      Upload your first document to get started.
+    {% endif %}
+  </p>
+  {% if q or selected_category_id or expiry_filter %}
+    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">Clear Filters</a>
   {% else %}
-    <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary mt-2">
-      Clear Filters
+    <a href="{{ url_for('upload_get') }}" class="btn btn-primary btn-sm">
+      <i class="bi bi-cloud-upload me-1"></i>Upload Document
     </a>
   {% endif %}
 </div>

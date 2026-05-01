@@ -6,9 +6,28 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [1.1.0] - 2026-04-30
+
+### Added
+
+- Settings page (`/settings`) with password change and theme switching
+- Light/dark mode toggle — preference stored in DB, persists across restarts
+- `settings` table in SQLite for persistent configuration
+- Settings nav link added to top navigation bar
+
+### Changed
+
+- Redesigned Edit page with file info notice and consistent card style
+- Redesigned Categories page — icon preview in input group, cleaner table rows with icon badges
+- Preview page tag pills and delete button use solid backgrounds for WCAG contrast compliance
+- All pages now follow a unified card header style (`small fw-semibold` muted label)
+
+---
+
 ## [1.0.0] - 2026-05-01
 
 ### Added
+
 - Initial release of DocVault
 - Single-user password-protected login (`APP_PASSWORD` env var)
 - Document upload: PDF, PNG, JPG, GIF, WEBP, DOCX (up to 50 MB)

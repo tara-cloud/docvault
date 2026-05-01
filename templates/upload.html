@@ -3,59 +3,66 @@
 
 {% block content %}
 <div class="row justify-content-center">
-  <div class="col-12 col-lg-8">
+  <div class="col-12 col-lg-7">
 
     <div class="d-flex align-items-center gap-2 mb-4">
       <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
       </a>
-      <h3 class="mb-0">Upload Document</h3>
+      <h4 class="mb-0 fw-semibold">Upload Document</h4>
     </div>
 
-    <div class="card border-secondary">
+    <div class="card">
       <div class="card-body p-4">
-        <form method="POST" action="{{ url_for('upload_post') }}" enctype="multipart/form-data">
+        <form method="POST" action="{{ url_for('upload_post') }}" enctype="multipart/form-data" id="upload-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-          <div class="mb-3">
-            <label for="file" class="form-label fw-semibold">File <span class="text-danger">*</span></label>
-            <input
-              type="file"
-              id="file"
-              name="file"
-              class="form-control"
-              accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx"
-              required
-            />
-            <div class="form-text">Supported: PDF, PNG, JPG, GIF, WEBP, DOCX &mdash; max 50 MB</div>
+          {# ── Drag-drop zone ── #}
+          <div class="mb-4" id="drop-wrapper">
+            <label for="file" class="form-label small fw-semibold">File <span class="text-danger">*</span></label>
+            <div class="upload-zone" id="upload-zone">
+              <input type="file" id="file" name="file"
+                     accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx" required />
+              <div id="zone-content">
+                <i class="bi bi-cloud-upload upload-icon d-block mb-2"></i>
+                <div class="fw-semibold mb-1" style="color:var(--dv-text)">Drop file here or click to browse</div>
+                <div class="small" style="color:var(--dv-muted)">PDF, PNG, JPG, GIF, WEBP, DOCX &mdash; max 50 MB</div>
+              </div>
+            </div>
+          </div>
+
+          {# ── File chosen preview ── #}
+          <div id="file-preview" class="d-none mb-4">
+            <div class="d-flex align-items-center gap-3 p-3 rounded-3"
+                 style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
+              <i id="file-icon" class="bi bi-file-earmark fs-2" style="color:var(--dv-muted)"></i>
+              <div class="flex-grow-1 overflow-hidden">
+                <div id="file-name" class="fw-semibold text-truncate small"></div>
+                <div id="file-size" class="small" style="color:var(--dv-muted)"></div>
+              </div>
+              <button type="button" id="clear-file" class="btn btn-sm btn-outline-secondary">
+                <i class="bi bi-x"></i>
+              </button>
+            </div>
           </div>
 
           <div class="mb-3">
-            <label for="display_name" class="form-label fw-semibold">Document Name <span class="text-danger">*</span></label>
-            <input
-              type="text"
-              id="display_name"
-              name="display_name"
-              class="form-control"
-              placeholder="e.g. Passport, Health Insurance Card"
-              required
-            />
+            <label for="display_name" class="form-label small fw-semibold">
+              Document Name <span class="text-danger">*</span>
+            </label>
+            <input type="text" id="display_name" name="display_name" class="form-control"
+                   placeholder="e.g. Passport, Health Insurance Card" required />
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label fw-semibold">Description</label>
-            <textarea
-              id="description"
-              name="description"
-              class="form-control"
-              rows="2"
-              placeholder="Optional notes about this document"
-            ></textarea>
+            <label for="description" class="form-label small fw-semibold">Description</label>
+            <textarea id="description" name="description" class="form-control" rows="2"
+                      placeholder="Optional notes…"></textarea>
           </div>
 
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label for="category_id" class="form-label fw-semibold">Category</label>
+              <label for="category_id" class="form-label small fw-semibold">Category</label>
               <select id="category_id" name="category_id" class="form-select">
                 {% for cat in categories %}
                   <option value="{{ cat.id }}" {% if cat.slug == 'other' %}selected{% endif %}>
@@ -65,35 +72,25 @@
               </select>
             </div>
             <div class="col-md-6">
-              <label for="expiry_date" class="form-label fw-semibold">Expiry Date</label>
-              <input
-                type="date"
-                id="expiry_date"
-                name="expiry_date"
-                class="form-control"
-              />
+              <label for="expiry_date" class="form-label small fw-semibold">Expiry Date</label>
+              <input type="date" id="expiry_date" name="expiry_date" class="form-control" />
               <div class="form-text">For ID cards, licenses, insurance, etc.</div>
             </div>
           </div>
 
           <div class="mb-4">
-            <label for="tag-text" class="form-label fw-semibold">Tags</label>
+            <label for="tag-text" class="form-label small fw-semibold">Tags</label>
             <div class="tag-input-box" id="tag-box">
               <input type="hidden" name="tags" id="tags-hidden" />
-              <input
-                type="text"
-                id="tag-text"
-                class="tag-input-real"
-                placeholder="Type a tag and press Enter or comma…"
-                autocomplete="off"
-              />
+              <input type="text" id="tag-text" class="tag-input-real"
+                     placeholder="Type a tag and press Enter or comma…" autocomplete="off" />
             </div>
-            <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag to add it.</div>
+            <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag.</div>
           </div>
 
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary">
-              <i class="bi bi-cloud-upload"></i> Upload Document
+            <button type="submit" class="btn btn-primary px-4">
+              <i class="bi bi-cloud-upload me-1"></i> Upload
             </button>
             <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
           </div>
@@ -107,64 +104,98 @@
 
 {% block scripts %}
 <script>
-  // Auto-fill document name from filename
-  document.getElementById('file').addEventListener('change', function () {
-    const nameField = document.getElementById('display_name');
-    if (this.files.length && !nameField.value) {
-      nameField.value = this.files[0].name.replace(/\.[^.]+$/, '');
+(function () {
+  const fileInput   = document.getElementById('file');
+  const zone        = document.getElementById('upload-zone');
+  const preview     = document.getElementById('file-preview');
+  const fileName    = document.getElementById('file-name');
+  const fileSize    = document.getElementById('file-size');
+  const fileIcon    = document.getElementById('file-icon');
+  const clearBtn    = document.getElementById('clear-file');
+  const nameField   = document.getElementById('display_name');
+
+  const typeIcons = { pdf:'file-earmark-pdf', 'image':'file-earmark-image', docx:'file-earmark-word' };
+  const typeColors = { pdf:'#f85149', image:'#3fb950', docx:'#58a6ff' };
+
+  function formatBytes(b) {
+    if (b < 1024) return b + ' B';
+    if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+    return (b/1048576).toFixed(1) + ' MB';
+  }
+
+  function getType(name) {
+    const ext = name.split('.').pop().toLowerCase();
+    if (ext === 'pdf') return 'pdf';
+    if (['png','jpg','jpeg','gif','webp'].includes(ext)) return 'image';
+    if (ext === 'docx') return 'docx';
+    return 'other';
+  }
+
+  function showFile(file) {
+    const type = getType(file.name);
+    fileName.textContent = file.name;
+    fileSize.textContent = formatBytes(file.size);
+    fileIcon.className = `bi bi-${typeIcons[type] || 'file-earmark'} fs-2`;
+    fileIcon.style.color = typeColors[type] || 'var(--dv-muted)';
+    zone.parentElement.classList.add('file-chosen');
+    preview.classList.remove('d-none');
+    if (!nameField.value) nameField.value = file.name.replace(/\.[^.]+$/, '');
+  }
+
+  function clearFile() {
+    fileInput.value = '';
+    preview.classList.add('d-none');
+    zone.parentElement.classList.remove('file-chosen');
+    nameField.value = '';
+  }
+
+  fileInput.addEventListener('change', function () {
+    if (this.files.length) showFile(this.files[0]);
+  });
+  clearBtn.addEventListener('click', clearFile);
+
+  // Drag-drop
+  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
+  zone.addEventListener('drop', e => {
+    e.preventDefault();
+    zone.classList.remove('dragover');
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      const dt = new DataTransfer();
+      dt.items.add(file);
+      fileInput.files = dt.files;
+      showFile(file);
     }
   });
 
   // Tag chip widget
-  (function () {
-    const box    = document.getElementById('tag-box');
-    const input  = document.getElementById('tag-text');
-    const hidden = document.getElementById('tags-hidden');
-    const tags   = [];
+  const box    = document.getElementById('tag-box');
+  const input  = document.getElementById('tag-text');
+  const hidden = document.getElementById('tags-hidden');
+  const tags   = [];
 
-    function renderChips() {
-      box.querySelectorAll('.tag-chip').forEach(el => el.remove());
-      tags.forEach((tag, i) => {
-        const chip = document.createElement('span');
-        chip.className = 'tag-chip';
-        chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
-        chip.querySelector('button').addEventListener('click', () => {
-          tags.splice(i, 1);
-          renderChips();
-          syncHidden();
-        });
-        input.before(chip);
-      });
-    }
-
-    function syncHidden() {
-      hidden.value = tags.join(',');
-    }
-
-    function addTag(raw) {
-      const val = raw.trim().toLowerCase();
-      if (val && !tags.includes(val)) {
-        tags.push(val);
-        renderChips();
-        syncHidden();
-      }
-      input.value = '';
-    }
-
-    input.addEventListener('keydown', function (e) {
-      if (e.key === 'Enter' || e.key === ',') {
-        e.preventDefault();
-        addTag(this.value);
-      } else if (e.key === 'Backspace' && this.value === '' && tags.length) {
-        tags.pop();
-        renderChips();
-        syncHidden();
-      }
+  function renderChips() {
+    box.querySelectorAll('.tag-chip').forEach(el => el.remove());
+    tags.forEach((tag, i) => {
+      const chip = document.createElement('span');
+      chip.className = 'tag-chip';
+      chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
+      chip.querySelector('button').addEventListener('click', () => { tags.splice(i,1); renderChips(); syncHidden(); });
+      input.before(chip);
     });
-
-    input.addEventListener('blur', function () {
-      if (this.value.trim()) addTag(this.value);
-    });
-  })();
+  }
+  function syncHidden() { hidden.value = tags.join(','); }
+  function addTag(raw) {
+    const val = raw.trim().toLowerCase();
+    if (val && !tags.includes(val)) { tags.push(val); renderChips(); syncHidden(); }
+    input.value = '';
+  }
+  input.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(this.value); }
+    else if (e.key === 'Backspace' && !this.value && tags.length) { tags.pop(); renderChips(); syncHidden(); }
+  });
+  input.addEventListener('blur', function() { if (this.value.trim()) addTag(this.value); });
+})();
 </script>
 {% endblock %}
