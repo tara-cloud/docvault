@@ -565,6 +565,7 @@ def settings_get():
 @app.route("/settings/password", methods=["POST"])
 @login_required
 def settings_password():
+    global HASHED_PASSWORD
     if not _validate_csrf(request.form.get("csrf_token")):
         abort(400)
     current  = request.form.get("current_password", "")
@@ -583,7 +584,6 @@ def settings_password():
 
     new_hash = generate_password_hash(new_pw)
     _set_setting("password_hash", new_hash)
-    global HASHED_PASSWORD
     HASHED_PASSWORD = new_hash
     flash("Password updated successfully.", "success")
     return redirect(url_for("settings_get"))
