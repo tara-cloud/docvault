@@ -17,7 +17,8 @@
         <span class="small fw-semibold" style="color:var(--dv-muted)">Document Details</span>
       </div>
       <div class="card-body p-4">
-        <form method="POST" action="{{ url_for('doc_edit_post', doc_id=doc.id) }}">
+        <form method="POST" action="{{ url_for('doc_edit_post', doc_id=doc.id) }}"
+              enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
           <div class="mb-3">
@@ -63,15 +64,54 @@
             <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag.</div>
           </div>
 
-          {# File info notice #}
-          <div class="d-flex align-items-center gap-3 p-3 rounded-3 mb-4"
-               style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
-            <i class="bi bi-info-circle" style="color:var(--dv-muted);font-size:1.1rem;flex-shrink:0"></i>
-            <p class="mb-0 small" style="color:var(--dv-muted)">
-              File: <strong style="color:var(--dv-text)">{{ doc.original_name }}</strong>
-              &bull; {{ doc.file_size_human }} &bull; {{ doc.file_ext[1:] | upper }}
-              <br>To replace the file, delete this document and re-upload.
-            </p>
+          {# ── Current file + Replace section ── #}
+          <div class="mb-4">
+            <div class="d-flex align-items-center justify-content-between mb-2">
+              <span class="small fw-semibold">Current File</span>
+              <button type="button" id="toggle-replace-btn"
+                      class="btn btn-outline-secondary btn-sm">
+                Replace File
+              </button>
+            </div>
+
+            <div class="d-flex align-items-center gap-3 p-3 rounded-3"
+                 style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
+              <i class="bi bi-file-earmark" style="color:var(--dv-muted);font-size:1.1rem;flex-shrink:0"></i>
+              <div class="flex-grow-1 overflow-hidden">
+                <div class="small fw-semibold text-truncate" style="color:var(--dv-text)">
+                  {{ doc.original_name }}
+                </div>
+                <div class="small" style="color:var(--dv-muted)">
+                  {{ doc.file_ext[1:] | upper }} &bull; {{ doc.file_size_human }}
+                  &bull; <span class="badge" style="background:var(--dv-surface);border:1px solid var(--dv-border);color:var(--dv-muted);font-size:0.7rem">v{{ doc.version_num }}</span>
+                  {% if versions %}
+                    &bull; {{ versions | length }} previous version{{ 's' if versions | length != 1 }}
+                  {% endif %}
+                </div>
+              </div>
+            </div>
+
+            {# Collapsible replace panel — hidden by default #}
+            <div id="replace-panel" class="d-none mt-3 p-3 rounded-3"
+                 style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
+              <div class="mb-3">
+                <label for="new_file" class="form-label small fw-semibold">
+                  New File <span class="text-danger">*</span>
+                </label>
+                <input type="file" id="new_file" name="new_file" class="form-control"
+                       accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx" />
+                <div class="form-text">
+                  PDF, PNG, JPG, GIF, WEBP, DOCX &mdash; max 50 MB.
+                  The current file will be kept as a previous version.
+                </div>
+              </div>
+              <div>
+                <label for="version_note" class="form-label small fw-semibold">Version Note</label>
+                <input type="text" id="version_note" name="version_note" class="form-control"
+                       placeholder="e.g. 2025 renewal, corrected scan…" maxlength="200" />
+                <div class="form-text">Optional — describe what changed in this version.</div>
+              </div>
+            </div>
           </div>
 
           <div class="d-flex gap-2">
@@ -91,6 +131,17 @@
 {% block scripts %}
 <script>
 (function () {
+  // Replace file toggle
+  const toggleBtn   = document.getElementById('toggle-replace-btn');
+  const replacePanel = document.getElementById('replace-panel');
+  const fileInput   = document.getElementById('new_file');
+  toggleBtn.addEventListener('click', function () {
+    const open = replacePanel.classList.toggle('d-none');
+    this.textContent = open ? 'Replace File' : 'Cancel';
+    if (open) fileInput.value = '';
+  });
+
+  // Tag chip widget
   const box    = document.getElementById('tag-box');
   const input  = document.getElementById('tag-text');
   const hidden = document.getElementById('tags-hidden');

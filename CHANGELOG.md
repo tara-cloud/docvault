@@ -6,6 +6,25 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [1.2.0] - 2026-05-08
+
+### Added
+
+- Document versioning — upload a new file when editing a document; the old file is archived as a previous version
+- Version history panel in the preview sidebar showing version number, date, file type, size, and optional note
+- Download any previous version directly from the preview page
+- Restore any previous version to become the current document (current file is auto-archived)
+- `document_versions` table in SQLite; safe migration adds `version_num` column to existing `documents` rows
+- Version note field on edit page — optional description of what changed (e.g. "2025 renewal")
+
+### Changed
+
+- `doc_delete` now cleans up all version files from disk before removing the document
+- Edit page shows current file info with version badge and previous-version count hint
+- File replacement logic extracted to `_replace_doc_file()` helper for clarity
+
+---
+
 ## [1.1.0] - 2026-04-30
 
 ### Added
@@ -17,7 +36,7 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ### Changed
 
-- Redesigned Edit page with file info notice and consistent card style
+- Redesigned Edit page with file info notice and consistent card header style
 - Redesigned Categories page — icon preview in input group, cleaner table rows with icon badges
 - Preview page tag pills and delete button use solid backgrounds for WCAG contrast compliance
 - All pages now follow a unified card header style (`small fw-semibold` muted label)

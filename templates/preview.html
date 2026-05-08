@@ -123,6 +123,58 @@
           </form>
         </div>
 
+        {# ── Version History ── #}
+        {% if versions %}
+        <hr class="my-3">
+        <div class="d-flex align-items-center justify-content-between mb-2">
+          <span class="small fw-semibold" style="color:var(--dv-muted)">
+            <i class="bi bi-clock-history me-1"></i>Version History
+          </span>
+          <span class="badge" style="background:var(--dv-surface-2);border:1px solid var(--dv-border);color:var(--dv-muted);font-size:0.7rem">
+            v{{ doc.version_num }} current
+          </span>
+        </div>
+        <ul class="list-unstyled mb-0">
+          {% for v in versions %}
+          <li class="py-2" style="border-top:1px solid var(--dv-border)">
+            <div class="d-flex align-items-start justify-content-between gap-2">
+              <div class="overflow-hidden">
+                <div class="small fw-semibold" style="color:var(--dv-text)">
+                  v{{ v.version_num }}
+                  <span class="fw-normal" style="color:var(--dv-muted)">
+                    &mdash; {{ v.file_ext[1:] | upper }} &bull; {{ v.file_size_human }}
+                  </span>
+                </div>
+                <div class="small" style="color:var(--dv-muted)">{{ v.replaced_at[:10] }}</div>
+                {% if v.version_note %}
+                  <div class="small fst-italic mt-1" style="color:var(--dv-muted)">{{ v.version_note }}</div>
+                {% endif %}
+              </div>
+              <div class="d-flex flex-column gap-1 flex-shrink-0">
+                <a href="{{ url_for('doc_version_download', doc_id=doc.id, ver_id=v.id) }}"
+                   class="btn btn-sm py-0 px-2"
+                   style="background:var(--dv-surface-2);border:1px solid var(--dv-border);color:var(--dv-text)"
+                   title="Download v{{ v.version_num }}">
+                  <i class="bi bi-download"></i>
+                </a>
+                <form method="POST"
+                      action="{{ url_for('doc_version_restore', doc_id=doc.id, ver_id=v.id) }}"
+                      onsubmit="return confirm('Restore v{{ v.version_num }}? The current file will be archived as a version.')">
+                  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                  <button type="submit"
+                          class="btn btn-sm py-0 px-2"
+                          style="background:var(--dv-surface-2);border:1px solid rgba(26,115,232,0.3);color:#58a6ff"
+                          title="Restore v{{ v.version_num }}">
+                    <i class="bi bi-arrow-counterclockwise"></i>
+                  </button>
+                </form>
+              </div>
+            </div>
+          </li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+
       </div>
     </div>
   </div>

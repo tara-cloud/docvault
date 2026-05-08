@@ -95,7 +95,28 @@ def init_db():
                 key   TEXT PRIMARY KEY,
                 value TEXT NOT NULL
             );
+
+            CREATE TABLE IF NOT EXISTS document_versions (
+                id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                document_id   INTEGER NOT NULL,
+                version_num   INTEGER NOT NULL,
+                uuid          TEXT    NOT NULL UNIQUE,
+                original_name TEXT    NOT NULL,
+                file_ext      TEXT    NOT NULL,
+                file_size     INTEGER NOT NULL,
+                mime_type     TEXT    NOT NULL,
+                version_note  TEXT,
+                replaced_at   TEXT    NOT NULL,
+                FOREIGN KEY (document_id) REFERENCES documents(id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_versions_doc ON document_versions(document_id);
         """)
+        # Migration: add version_num to documents (safe for existing DBs)
+        try:
+            conn.execute("ALTER TABLE documents ADD COLUMN version_num INTEGER NOT NULL DEFAULT 1")
+        except sqlite3.OperationalError:
+            pass  # column already exists
 
 
 def seed_categories():
@@ -209,6 +230,7 @@ def _enrich_doc(doc):
     d["days_until_expiry"] = days
     d["tags_list"] = [t.strip() for t in (d.get("tags") or "").strip(",").split(",") if t.strip()]
     d["file_size_human"] = _human_size(d["file_size"])
+    d["version_num"] = d.get("version_num") or 1
     return d
 
 
@@ -218,6 +240,15 @@ def _human_size(size):
             return f"{size:.0f} {unit}"
         size /= 1024
     return f"{size:.1f} GB"
+
+
+def _get_doc_versions(doc_id):
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT * FROM document_versions WHERE document_id=? ORDER BY version_num DESC",
+            (doc_id,)
+        ).fetchall()
+    return [{**dict(v), "file_size_human": _human_size(v["file_size"])} for v in rows]
 
 
 def _search_documents(q=None, category_id=None, tag=None, expiry_filter=None):
@@ -414,7 +445,8 @@ def _normalize_tags(raw):
 @login_required
 def doc_detail(doc_id):
     doc = _enrich_doc(_get_doc_or_404(doc_id))
-    return render_template("preview.html", doc=doc)
+    versions = _get_doc_versions(doc_id)
+    return render_template("preview.html", doc=doc, versions=versions)
 
 
 @app.route("/doc/<int:doc_id>/preview-file")
@@ -445,7 +477,50 @@ def doc_edit_get(doc_id):
     doc = _enrich_doc(_get_doc_or_404(doc_id))
     with get_db() as conn:
         categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
-    return render_template("edit.html", doc=doc, categories=categories)
+    versions = _get_doc_versions(doc_id)
+    return render_template("edit.html", doc=doc, categories=categories, versions=versions)
+
+
+def _replace_doc_file(doc_id, new_file, version_note, display_name, description, category_id, tags_norm, expiry_date):
+    """Archive current file as a version, save new file, update documents row.
+    Returns (error_message | None, new_version_num).
+    """
+    ext = os.path.splitext(new_file.filename)[1].lower()
+    if ext not in ALLOWED_EXTENSIONS:
+        return f"File type '{ext}' is not allowed.", None
+    new_uuid  = str(uuid.uuid4())
+    save_path = os.path.join(UPLOAD_DIR, new_uuid + ext)
+    try:
+        new_file.save(save_path)
+        new_size     = os.path.getsize(save_path)
+        new_mime     = ALLOWED_EXTENSIONS[ext]
+        new_original = secure_filename(new_file.filename)
+        now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+        with get_db() as conn:
+            cur = conn.execute(
+                "SELECT uuid, file_ext, file_size, mime_type, original_name, version_num FROM documents WHERE id=?",
+                (doc_id,)
+            ).fetchone()
+            conn.execute(
+                """INSERT INTO document_versions
+                   (document_id, version_num, uuid, original_name, file_ext, file_size, mime_type, version_note, replaced_at)
+                   VALUES (?,?,?,?,?,?,?,?,?)""",
+                (doc_id, cur["version_num"], cur["uuid"], cur["original_name"],
+                 cur["file_ext"], cur["file_size"], cur["mime_type"], version_note, now)
+            )
+            conn.execute(
+                """UPDATE documents SET uuid=?, original_name=?, file_ext=?, file_size=?,
+                   mime_type=?, version_num=version_num+1, uploaded_at=?,
+                   display_name=?, description=?, category_id=?, tags=?, expiry_date=?
+                   WHERE id=?""",
+                (new_uuid, new_original, ext, new_size, new_mime, now,
+                 display_name, description, category_id, tags_norm, expiry_date, doc_id)
+            )
+        return None, (cur["version_num"] or 1) + 1
+    except Exception:
+        if os.path.exists(save_path):
+            os.remove(save_path)
+        return "File replacement failed.", None
 
 
 @app.route("/doc/<int:doc_id>/edit", methods=["POST"])
@@ -466,14 +541,26 @@ def doc_edit_post(doc_id):
     tags_norm   = _normalize_tags(raw_tags)
     expiry_date = request.form.get("expiry_date", "").strip() or None
 
-    with get_db() as conn:
-        conn.execute(
-            """UPDATE documents SET display_name=?, description=?, category_id=?,
-               tags=?, expiry_date=? WHERE id=?""",
-            (display_name, description, category_id, tags_norm, expiry_date, doc_id),
+    new_file = request.files.get("new_file")
+    if new_file and new_file.filename:
+        err, new_version = _replace_doc_file(
+            doc_id, new_file,
+            request.form.get("version_note", "").strip() or None,
+            display_name, description, category_id, tags_norm, expiry_date,
         )
+        if err:
+            flash(err, "danger")
+            return redirect(url_for("doc_edit_get", doc_id=doc_id))
+        flash(f'"{display_name}" updated — file saved as v{new_version}.', "success")
+    else:
+        with get_db() as conn:
+            conn.execute(
+                """UPDATE documents SET display_name=?, description=?, category_id=?,
+                   tags=?, expiry_date=? WHERE id=?""",
+                (display_name, description, category_id, tags_norm, expiry_date, doc_id),
+            )
+        flash("Document updated.", "success")
 
-    flash("Document updated.", "success")
     return redirect(url_for("doc_detail", doc_id=doc_id))
 
 
@@ -482,14 +569,93 @@ def doc_edit_post(doc_id):
 def doc_delete(doc_id):
     if not _validate_csrf(request.form.get("csrf_token")):
         abort(400)
-    doc  = _get_doc_or_404(doc_id)
+    doc = _get_doc_or_404(doc_id)
+
+    with get_db() as conn:
+        ver_files = conn.execute(
+            "SELECT uuid, file_ext FROM document_versions WHERE document_id=?", (doc_id,)
+        ).fetchall()
+
+    for v in ver_files:
+        vpath = os.path.join(UPLOAD_DIR, v["uuid"] + v["file_ext"])
+        if os.path.exists(vpath):
+            os.remove(vpath)
+
     path = _get_doc_path(doc)
     if os.path.exists(path):
         os.remove(path)
+
     with get_db() as conn:
-        conn.execute("DELETE FROM documents WHERE id = ?", (doc_id,))
+        conn.execute("DELETE FROM document_versions WHERE document_id=?", (doc_id,))
+        conn.execute("DELETE FROM documents WHERE id=?", (doc_id,))
+
     flash("Document deleted.", "success")
     return redirect(url_for("dashboard"))
+
+# ---------------------------------------------------------------------------
+# Document version routes
+# ---------------------------------------------------------------------------
+@app.route("/doc/<int:doc_id>/version/<int:ver_id>/download", methods=["GET"])
+@login_required
+def doc_version_download(doc_id, ver_id):
+    with get_db() as conn:
+        ver = conn.execute(
+            "SELECT * FROM document_versions WHERE id=? AND document_id=?",
+            (ver_id, doc_id)
+        ).fetchone()
+    if ver is None:
+        abort(404)
+    path = os.path.join(UPLOAD_DIR, ver["uuid"] + ver["file_ext"])
+    if not os.path.exists(path):
+        abort(404)
+    return send_file(path, as_attachment=True, download_name=ver["original_name"])
+
+
+@app.route("/doc/<int:doc_id>/version/<int:ver_id>/restore", methods=["POST"])
+@login_required
+def doc_version_restore(doc_id, ver_id):
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    with get_db() as conn:
+        ver = conn.execute(
+            "SELECT * FROM document_versions WHERE id=? AND document_id=?",
+            (ver_id, doc_id)
+        ).fetchone()
+    if ver is None:
+        abort(404)
+    vpath = os.path.join(UPLOAD_DIR, ver["uuid"] + ver["file_ext"])
+    if not os.path.exists(vpath):
+        flash("Version file not found on disk — cannot restore.", "danger")
+        return redirect(url_for("doc_detail", doc_id=doc_id))
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    with get_db() as conn:
+        cur = conn.execute(
+            "SELECT uuid, file_ext, file_size, mime_type, original_name, version_num FROM documents WHERE id=?",
+            (doc_id,)
+        ).fetchone()
+        # Archive current live file as a new version
+        conn.execute(
+            """INSERT INTO document_versions
+               (document_id, version_num, uuid, original_name, file_ext, file_size, mime_type, version_note, replaced_at)
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (doc_id, cur["version_num"], cur["uuid"], cur["original_name"],
+             cur["file_ext"], cur["file_size"], cur["mime_type"],
+             f"Restored v{ver['version_num']}", now)
+        )
+        # Promote restored version to current
+        conn.execute(
+            """UPDATE documents SET uuid=?, original_name=?, file_ext=?, file_size=?,
+               mime_type=?, version_num=version_num+1, uploaded_at=? WHERE id=?""",
+            (ver["uuid"], ver["original_name"], ver["file_ext"], ver["file_size"],
+             ver["mime_type"], now, doc_id)
+        )
+        # Remove the old version record (it is now the live file)
+        conn.execute("DELETE FROM document_versions WHERE id=?", (ver_id,))
+
+    flash(f"v{ver['version_num']} restored successfully.", "success")
+    return redirect(url_for("doc_detail", doc_id=doc_id))
+
 
 # ---------------------------------------------------------------------------
 # Categories
