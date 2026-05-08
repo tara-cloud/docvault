@@ -55,7 +55,9 @@
                   <span class="small">Has expiry</span>
                 </span>
               </label>
-              <input type="date" id="expiry_date" name="expiry_date" class="form-control {% if not doc.expiry_date %}d-none{% endif %}"
+              <input type="date" id="expiry_date" name="expiry_date"
+                     class="form-control {% if not doc.expiry_date %}d-none{% endif %}"
+                     {% if not doc.expiry_date %}disabled{% endif %}
                      value="{{ doc.expiry_date or '' }}" />
             </div>
           </div>
@@ -181,6 +183,7 @@
   const expiryDate = document.getElementById('expiry_date');
   hasExpiry.addEventListener('change', function () {
     expiryDate.classList.toggle('d-none', !this.checked);
+    expiryDate.disabled = !this.checked;
     if (!this.checked) expiryDate.value = '';
   });
 })();

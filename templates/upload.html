@@ -79,7 +79,7 @@
                   <span class="small">Has expiry</span>
                 </span>
               </label>
-              <input type="date" id="expiry_date" name="expiry_date" class="form-control d-none" />
+              <input type="date" id="expiry_date" name="expiry_date" class="form-control d-none" disabled />
               <div class="form-text">Enable for ID cards, licenses, insurance, etc.</div>
             </div>
           </div>
@@ -208,6 +208,7 @@
   const expiryDate = document.getElementById('expiry_date');
   hasExpiry.addEventListener('change', function () {
     expiryDate.classList.toggle('d-none', !this.checked);
+    expiryDate.disabled = !this.checked;
     if (!this.checked) expiryDate.value = '';
   });
 })();

@@ -6,6 +6,16 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [1.2.1] - 2026-05-08
+
+### Changed
+
+- Expiry date field on upload and edit forms is now controlled by a "Has expiry" checkbox
+- When unchecked, the date input is hidden **and** disabled (not submitted) — guaranteed to store NULL
+- NULL expiry docs are excluded from all expiry calculations (expiring-soon count, expired count, expiry filter)
+
+---
+
 ## [1.2.0] - 2026-05-08
 
 ### Added
