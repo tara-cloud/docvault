@@ -1,3 +1,4 @@
+import io
 import os
 import uuid
 import sqlite3
@@ -6,10 +7,17 @@ import secrets
 from datetime import datetime, date, timedelta
 from flask import (
     Flask, render_template, request, redirect,
-    url_for, session, send_file, flash, abort, jsonify
+    url_for, session, send_file, flash, abort, jsonify, Response
 )
 from werkzeug.security import check_password_hash, generate_password_hash
 from werkzeug.utils import secure_filename
+
+try:
+    from pypdf import PdfReader
+    from pypdf.errors import PdfReadError
+    _PYPDF_AVAILABLE = True
+except ImportError:
+    _PYPDF_AVAILABLE = False
 
 # ---------------------------------------------------------------------------
 # Configuration
@@ -73,6 +81,16 @@ def init_db():
                 is_default INTEGER NOT NULL DEFAULT 0
             );
 
+            CREATE TABLE IF NOT EXISTS folders (
+                id         INTEGER PRIMARY KEY AUTOINCREMENT,
+                name       TEXT    NOT NULL,
+                parent_id  INTEGER REFERENCES folders(id) ON DELETE CASCADE,
+                created_at TEXT    NOT NULL,
+                UNIQUE(name, parent_id)
+            );
+
+            CREATE INDEX IF NOT EXISTS idx_folders_parent ON folders(parent_id);
+
             CREATE TABLE IF NOT EXISTS documents (
                 id            INTEGER PRIMARY KEY AUTOINCREMENT,
                 uuid          TEXT    NOT NULL UNIQUE,
@@ -80,6 +98,7 @@ def init_db():
                 display_name  TEXT    NOT NULL,
                 description   TEXT,
                 category_id   INTEGER NOT NULL DEFAULT 7,
+                folder_id     INTEGER REFERENCES folders(id) ON DELETE SET NULL,
                 tags          TEXT,
                 file_ext      TEXT    NOT NULL,
                 file_size     INTEGER NOT NULL,
@@ -112,11 +131,17 @@ def init_db():
 
             CREATE INDEX IF NOT EXISTS idx_versions_doc ON document_versions(document_id);
         """)
-        # Migration: add version_num to documents (safe for existing DBs)
-        try:
-            conn.execute("ALTER TABLE documents ADD COLUMN version_num INTEGER NOT NULL DEFAULT 1")
-        except sqlite3.OperationalError:
-            pass  # column already exists
+        # Migrations: safe for existing DBs
+        for col_sql in [
+            "ALTER TABLE documents ADD COLUMN version_num INTEGER NOT NULL DEFAULT 1",
+            "ALTER TABLE documents ADD COLUMN folder_id INTEGER REFERENCES folders(id) ON DELETE SET NULL",
+        ]:
+            try:
+                conn.execute(col_sql)
+            except sqlite3.OperationalError:
+                pass
+        # Create folder index only after column is guaranteed to exist
+        conn.execute("CREATE INDEX IF NOT EXISTS idx_docs_folder ON documents(folder_id)")
 
 
 def seed_categories():
@@ -187,6 +212,77 @@ def _validate_csrf(token):
 app.jinja_env.globals["csrf_token"] = _generate_csrf
 
 # ---------------------------------------------------------------------------
+# Folder helpers
+# ---------------------------------------------------------------------------
+def _get_folder_or_404(folder_id):
+    with get_db() as conn:
+        folder = conn.execute("SELECT * FROM folders WHERE id=?", (folder_id,)).fetchone()
+    if folder is None:
+        abort(404)
+    return folder
+
+
+def _get_folder_path(folder_id):
+    """Return ordered list of (id, name) from root to the given folder."""
+    breadcrumb = []
+    with get_db() as conn:
+        fid = folder_id
+        while fid:
+            row = conn.execute("SELECT id, name, parent_id FROM folders WHERE id=?", (fid,)).fetchone()
+            if row is None:
+                break
+            breadcrumb.append({"id": row["id"], "name": row["name"]})
+            fid = row["parent_id"]
+    breadcrumb.reverse()
+    return breadcrumb
+
+
+def _get_subfolders(parent_id):
+    with get_db() as conn:
+        if parent_id is None:
+            rows = conn.execute(
+                "SELECT f.*, COUNT(d.id) AS doc_count FROM folders f "
+                "LEFT JOIN documents d ON d.folder_id = f.id "
+                "WHERE f.parent_id IS NULL GROUP BY f.id ORDER BY f.name"
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                "SELECT f.*, COUNT(d.id) AS doc_count FROM folders f "
+                "LEFT JOIN documents d ON d.folder_id = f.id "
+                "WHERE f.parent_id=? GROUP BY f.id ORDER BY f.name",
+                (parent_id,)
+            ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def _count_folder_docs_recursive(folder_id):
+    """Count all documents in folder and all descendant folders."""
+    with get_db() as conn:
+        total = 0
+        stack = [folder_id]
+        while stack:
+            fid = stack.pop()
+            cnt = conn.execute("SELECT COUNT(*) FROM documents WHERE folder_id=?", (fid,)).fetchone()[0]
+            total += cnt
+            children = conn.execute("SELECT id FROM folders WHERE parent_id=?", (fid,)).fetchall()
+            stack.extend(r["id"] for r in children)
+    return total
+
+
+def _folder_tree(parent_id=None, indent=0):
+    """Flat list of {id, name, depth} for folder selector dropdowns."""
+    with get_db() as conn:
+        rows = conn.execute(
+            "SELECT id, name, parent_id FROM folders WHERE parent_id IS ? ORDER BY name",
+            (parent_id,)
+        ).fetchall()
+    result = []
+    for r in rows:
+        result.append({"id": r["id"], "name": r["name"], "depth": indent})
+        result.extend(_folder_tree(r["id"], indent + 1))
+    return result
+
+# ---------------------------------------------------------------------------
 # Document helpers
 # ---------------------------------------------------------------------------
 def _get_doc_or_404(doc_id):
@@ -251,8 +347,15 @@ def _get_doc_versions(doc_id):
     return [{**dict(v), "file_size_human": _human_size(v["file_size"])} for v in rows]
 
 
-def _search_documents(q=None, category_id=None, tag=None, expiry_filter=None):
+def _search_documents(q=None, category_id=None, tag=None, expiry_filter=None, folder_id=None):
     conditions, params = [], []
+
+    # Folder filtering: None means root (no folder), int means specific folder
+    if folder_id == "root":
+        conditions.append("d.folder_id IS NULL")
+    elif folder_id is not None:
+        conditions.append("d.folder_id = ?")
+        params.append(folder_id)
 
     if q:
         like = f"%{q}%"
@@ -287,6 +390,17 @@ def _search_documents(q=None, category_id=None, tag=None, expiry_filter=None):
     with get_db() as conn:
         rows = conn.execute(sql, params).fetchall()
     return [_enrich_doc(r) for r in rows]
+
+
+def _is_pdf_encrypted(path):
+    """Return True if the PDF file is encrypted/password-protected."""
+    if not _PYPDF_AVAILABLE:
+        return False
+    try:
+        reader = PdfReader(path)
+        return reader.is_encrypted
+    except Exception:
+        return False
 
 # ---------------------------------------------------------------------------
 # Auth routes
@@ -334,13 +448,28 @@ def dashboard():
     category_id    = request.args.get("category_id", type=int)
     tag            = request.args.get("tag", "").strip()
     expiry_filter  = request.args.get("expiry_filter", "")
+    folder_id      = request.args.get("folder_id", type=int)
 
-    docs = _search_documents(
-        q=q or None,
-        category_id=category_id,
-        tag=tag or None,
-        expiry_filter=expiry_filter or None,
-    )
+    # When searching/filtering across the vault, ignore folder scope
+    searching = bool(q or category_id or tag or expiry_filter)
+
+    if searching:
+        docs = _search_documents(
+            q=q or None,
+            category_id=category_id,
+            tag=tag or None,
+            expiry_filter=expiry_filter or None,
+        )
+        subfolders = []
+        breadcrumb = []
+        current_folder = None
+    else:
+        docs = _search_documents(
+            folder_id=folder_id if folder_id else "root",
+        )
+        subfolders = _get_subfolders(folder_id)
+        breadcrumb = _get_folder_path(folder_id) if folder_id else []
+        current_folder = dict(_get_folder_or_404(folder_id)) if folder_id else None
 
     with get_db() as conn:
         categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
@@ -358,9 +487,15 @@ def dashboard():
             (today,),
         ).fetchone()[0]
 
+    folder_tree = _folder_tree()
+
     return render_template(
         "dashboard.html",
         docs=docs,
+        subfolders=subfolders,
+        breadcrumb=breadcrumb,
+        current_folder=current_folder,
+        folder_tree=folder_tree,
         categories=categories,
         total=total,
         expiring_count=expiring_count,
@@ -369,7 +504,90 @@ def dashboard():
         selected_category_id=category_id,
         selected_tag=tag,
         expiry_filter=expiry_filter,
+        folder_id=folder_id,
+        searching=searching,
     )
+
+@app.route("/doc/<int:doc_id>/move", methods=["POST"])
+@login_required
+def doc_move(doc_id):
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    _get_doc_or_404(doc_id)
+    # folder_id="" means move to root
+    raw = request.form.get("folder_id", "").strip()
+    folder_id = int(raw) if raw else None
+    with get_db() as conn:
+        conn.execute("UPDATE documents SET folder_id=? WHERE id=?", (folder_id, doc_id))
+    return jsonify({"ok": True})
+
+
+# ---------------------------------------------------------------------------
+# Folder CRUD
+# ---------------------------------------------------------------------------
+@app.route("/folders/create", methods=["POST"])
+@login_required
+def folder_create():
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    name = request.form.get("name", "").strip()
+    parent_id = request.form.get("parent_id", type=int)  # None = root
+
+    if not name:
+        flash("Folder name is required.", "danger")
+        return redirect(url_for("dashboard", folder_id=parent_id))
+
+    now = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    try:
+        with get_db() as conn:
+            conn.execute(
+                "INSERT INTO folders (name, parent_id, created_at) VALUES (?, ?, ?)",
+                (name, parent_id, now),
+            )
+        flash(f'Folder "{name}" created.', "success")
+    except sqlite3.IntegrityError:
+        flash(f'A folder named "{name}" already exists here.', "danger")
+
+    return redirect(url_for("dashboard", folder_id=parent_id))
+
+
+@app.route("/folders/<int:folder_id>/rename", methods=["POST"])
+@login_required
+def folder_rename(folder_id):
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    folder = _get_folder_or_404(folder_id)
+    name = request.form.get("name", "").strip()
+    if not name:
+        flash("Folder name is required.", "danger")
+        return redirect(url_for("dashboard", folder_id=folder["parent_id"]))
+    try:
+        with get_db() as conn:
+            conn.execute("UPDATE folders SET name=? WHERE id=?", (name, folder_id))
+        flash(f'Folder renamed to "{name}".', "success")
+    except sqlite3.IntegrityError:
+        flash(f'A folder named "{name}" already exists here.', "danger")
+    return redirect(url_for("dashboard", folder_id=folder_id))
+
+
+@app.route("/folders/<int:folder_id>/delete", methods=["POST"])
+@login_required
+def folder_delete(folder_id):
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    folder = _get_folder_or_404(folder_id)
+    parent_id = folder["parent_id"]
+
+    doc_count = _count_folder_docs_recursive(folder_id)
+    if doc_count > 0:
+        flash(f"Cannot delete: folder contains {doc_count} document(s). Move or delete them first.", "danger")
+        return redirect(url_for("dashboard", folder_id=folder_id))
+
+    with get_db() as conn:
+        conn.execute("DELETE FROM folders WHERE id=?", (folder_id,))
+
+    flash("Folder deleted.", "success")
+    return redirect(url_for("dashboard", folder_id=parent_id))
 
 # ---------------------------------------------------------------------------
 # Upload
@@ -379,7 +597,9 @@ def dashboard():
 def upload_get():
     with get_db() as conn:
         categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
-    return render_template("upload.html", categories=categories)
+    folder_id = request.args.get("folder_id", type=int)
+    folder_tree = _folder_tree()
+    return render_template("upload.html", categories=categories, folder_id=folder_id, folder_tree=folder_tree)
 
 
 @app.route("/upload", methods=["POST"])
@@ -414,22 +634,23 @@ def upload_post():
     expiry_date = request.form.get("expiry_date", "").strip() or None
     category_id = request.form.get("category_id", 7, type=int)
     description = request.form.get("description", "").strip() or None
+    folder_id   = request.form.get("folder_id", type=int)  # None = root
 
     with get_db() as conn:
         conn.execute(
             """INSERT INTO documents
-               (uuid, original_name, display_name, description, category_id, tags,
+               (uuid, original_name, display_name, description, category_id, folder_id, tags,
                 file_ext, file_size, mime_type, expiry_date, uploaded_at)
-               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
             (
                 file_uuid, original_name, display_name, description, category_id,
-                tags_norm, ext, file_size, ALLOWED_EXTENSIONS[ext],
+                folder_id, tags_norm, ext, file_size, ALLOWED_EXTENSIONS[ext],
                 expiry_date, datetime.now().strftime("%Y-%m-%d %H:%M:%S"),
             ),
         )
 
     flash(f'"{display_name}" uploaded successfully.', "success")
-    return redirect(url_for("dashboard"))
+    return redirect(url_for("dashboard", folder_id=folder_id))
 
 
 def _normalize_tags(raw):
@@ -446,7 +667,11 @@ def _normalize_tags(raw):
 def doc_detail(doc_id):
     doc = _enrich_doc(_get_doc_or_404(doc_id))
     versions = _get_doc_versions(doc_id)
-    return render_template("preview.html", doc=doc, versions=versions)
+    path = _get_doc_path(doc)
+    is_encrypted = False
+    if doc["mime_type"] == "application/pdf" and os.path.exists(path):
+        is_encrypted = _is_pdf_encrypted(path)
+    return render_template("preview.html", doc=doc, versions=versions, is_encrypted=is_encrypted)
 
 
 @app.route("/doc/<int:doc_id>/preview-file")
@@ -457,6 +682,38 @@ def doc_preview_file(doc_id):
     if not os.path.exists(path):
         abort(404)
     return send_file(path, mimetype=doc["mime_type"])
+
+
+@app.route("/doc/<int:doc_id>/preview-file-unlocked", methods=["POST"])
+@login_required
+def doc_preview_file_unlocked(doc_id):
+    """Decrypt a password-protected PDF in memory and stream it unlocked."""
+    doc  = _get_doc_or_404(doc_id)
+    if doc["mime_type"] != "application/pdf":
+        abort(400)
+    path = _get_doc_path(doc)
+    if not os.path.exists(path):
+        abort(404)
+    if not _PYPDF_AVAILABLE:
+        abort(501)
+
+    pdf_password = request.form.get("pdf_password", "")
+    try:
+        reader = PdfReader(path)
+        if reader.is_encrypted:
+            result = reader.decrypt(pdf_password)
+            if result == 0:
+                return jsonify({"error": "Incorrect password."}), 401
+        from pypdf import PdfWriter
+        writer = PdfWriter()
+        for page in reader.pages:
+            writer.add_page(page)
+        buf = io.BytesIO()
+        writer.write(buf)
+        buf.seek(0)
+        return Response(buf.read(), mimetype="application/pdf")
+    except Exception as e:
+        return jsonify({"error": "Could not decrypt PDF."}), 400
 
 
 @app.route("/doc/<int:doc_id>/download")
@@ -478,13 +735,11 @@ def doc_edit_get(doc_id):
     with get_db() as conn:
         categories = conn.execute("SELECT * FROM categories ORDER BY name").fetchall()
     versions = _get_doc_versions(doc_id)
-    return render_template("edit.html", doc=doc, categories=categories, versions=versions)
+    folder_tree = _folder_tree()
+    return render_template("edit.html", doc=doc, categories=categories, versions=versions, folder_tree=folder_tree)
 
 
-def _replace_doc_file(doc_id, new_file, version_note, display_name, description, category_id, tags_norm, expiry_date):
-    """Archive current file as a version, save new file, update documents row.
-    Returns (error_message | None, new_version_num).
-    """
+def _replace_doc_file(doc_id, new_file, version_note, display_name, description, category_id, tags_norm, expiry_date, folder_id):
     ext = os.path.splitext(new_file.filename)[1].lower()
     if ext not in ALLOWED_EXTENSIONS:
         return f"File type '{ext}' is not allowed.", None
@@ -511,10 +766,10 @@ def _replace_doc_file(doc_id, new_file, version_note, display_name, description,
             conn.execute(
                 """UPDATE documents SET uuid=?, original_name=?, file_ext=?, file_size=?,
                    mime_type=?, version_num=version_num+1, uploaded_at=?,
-                   display_name=?, description=?, category_id=?, tags=?, expiry_date=?
+                   display_name=?, description=?, category_id=?, tags=?, expiry_date=?, folder_id=?
                    WHERE id=?""",
                 (new_uuid, new_original, ext, new_size, new_mime, now,
-                 display_name, description, category_id, tags_norm, expiry_date, doc_id)
+                 display_name, description, category_id, tags_norm, expiry_date, folder_id, doc_id)
             )
         return None, (cur["version_num"] or 1) + 1
     except Exception:
@@ -540,13 +795,14 @@ def doc_edit_post(doc_id):
     raw_tags    = request.form.get("tags", "").strip()
     tags_norm   = _normalize_tags(raw_tags)
     expiry_date = request.form.get("expiry_date", "").strip() or None
+    folder_id   = request.form.get("folder_id", type=int)  # None = root
 
     new_file = request.files.get("new_file")
     if new_file and new_file.filename:
         err, new_version = _replace_doc_file(
             doc_id, new_file,
             request.form.get("version_note", "").strip() or None,
-            display_name, description, category_id, tags_norm, expiry_date,
+            display_name, description, category_id, tags_norm, expiry_date, folder_id,
         )
         if err:
             flash(err, "danger")
@@ -556,8 +812,8 @@ def doc_edit_post(doc_id):
         with get_db() as conn:
             conn.execute(
                 """UPDATE documents SET display_name=?, description=?, category_id=?,
-                   tags=?, expiry_date=? WHERE id=?""",
-                (display_name, description, category_id, tags_norm, expiry_date, doc_id),
+                   tags=?, expiry_date=?, folder_id=? WHERE id=?""",
+                (display_name, description, category_id, tags_norm, expiry_date, folder_id, doc_id),
             )
         flash("Document updated.", "success")
 
@@ -634,7 +890,6 @@ def doc_version_restore(doc_id, ver_id):
             "SELECT uuid, file_ext, file_size, mime_type, original_name, version_num FROM documents WHERE id=?",
             (doc_id,)
         ).fetchone()
-        # Archive current live file as a new version
         conn.execute(
             """INSERT INTO document_versions
                (document_id, version_num, uuid, original_name, file_ext, file_size, mime_type, version_note, replaced_at)
@@ -643,14 +898,12 @@ def doc_version_restore(doc_id, ver_id):
              cur["file_ext"], cur["file_size"], cur["mime_type"],
              f"Restored v{ver['version_num']}", now)
         )
-        # Promote restored version to current
         conn.execute(
             """UPDATE documents SET uuid=?, original_name=?, file_ext=?, file_size=?,
                mime_type=?, version_num=version_num+1, uploaded_at=? WHERE id=?""",
             (ver["uuid"], ver["original_name"], ver["file_ext"], ver["file_size"],
              ver["mime_type"], now, doc_id)
         )
-        # Remove the old version record (it is now the live file)
         conn.execute("DELETE FROM document_versions WHERE id=?", (ver_id,))
 
     flash(f"v{ver['version_num']} restored successfully.", "success")

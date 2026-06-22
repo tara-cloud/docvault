@@ -378,3 +378,62 @@ kbd {
   padding: 1px 5px;
 }
 hr { border-color: var(--dv-border); opacity: 1; }
+
+/* ─── Folder cards ───────────────────────────────────────────────────────── */
+.folder-card {
+  background: var(--dv-surface);
+  border: 1px solid var(--dv-border) !important;
+  border-radius: var(--dv-radius) !important;
+  cursor: pointer;
+  transition: transform var(--dv-transition), box-shadow var(--dv-transition), border-color var(--dv-transition);
+}
+.folder-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0,0,0,0.4);
+  border-color: #d29922 !important;
+}
+.folder-icon {
+  font-size: 2rem;
+  color: #d29922;
+  line-height: 1;
+  transition: transform var(--dv-transition);
+}
+.folder-card:hover .folder-icon { transform: scale(1.1); }
+
+/* Drag-and-drop states */
+.doc-card[draggable="true"] { cursor: grab; }
+.doc-card[draggable="true"]:active { cursor: grabbing; }
+.drag-handle {
+  color: var(--dv-muted);
+  font-size: 0.9rem;
+  cursor: grab;
+  opacity: 0.5;
+  transition: opacity var(--dv-transition);
+}
+.doc-card:hover .drag-handle { opacity: 1; }
+.doc-col.dragging { opacity: 0.45; }
+.folder-drop-target.folder-drag-over .folder-card {
+  border-color: #d29922 !important;
+  box-shadow: 0 0 0 3px rgba(210,153,34,0.3);
+  transform: scale(1.04);
+}
+.breadcrumb-drag-over {
+  background: rgba(210,153,34,0.15) !important;
+  border-radius: 4px;
+  outline: 2px dashed #d29922;
+  outline-offset: 2px;
+}
+
+/* ─── Breadcrumb ─────────────────────────────────────────────────────────── */
+.dv-breadcrumb {
+  background: var(--dv-surface);
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  padding: 0.5rem 1rem;
+  font-size: 0.85rem;
+}
+.dv-breadcrumb .breadcrumb-item + .breadcrumb-item::before {
+  color: var(--dv-muted);
+}
+.dv-breadcrumb a { color: var(--dv-accent); }
+.dv-breadcrumb .breadcrumb-item.active { color: var(--dv-text); }

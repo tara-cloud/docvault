@@ -24,9 +24,14 @@
       </div>
       <div class="card-body p-0 preview-area">
         {% if doc.mime_type == 'application/pdf' %}
+          {% if is_encrypted %}
+          <iframe id="pdf-frame" src="" title="PDF preview"
+                  style="width:100%;height:75vh;border:none;display:none;"></iframe>
+          {% else %}
           <embed src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
                  type="application/pdf"
                  style="width:100%; height:75vh; border:none; display:block;" />
+          {% endif %}
         {% elif doc.mime_type in ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] %}
           <div class="d-flex align-items-center justify-content-center p-4"
                style="min-height:50vh; background:var(--dv-surface-2)">
@@ -123,6 +128,27 @@
           </form>
         </div>
 
+        {# ── Unlock form (password-protected PDFs only) ── #}
+        {% if is_encrypted %}
+        <div id="pdf-unlock-section">
+        <hr class="my-3">
+          <div class="d-flex align-items-center gap-2 mb-2">
+            <i class="bi bi-file-earmark-lock2" style="color:#d29922"></i>
+            <span class="small fw-semibold">Password-Protected PDF</span>
+          </div>
+          <div class="input-group input-group-sm">
+            <input type="password" id="pdf-password-input" class="form-control"
+                   placeholder="Document password…" autocomplete="off" />
+            <button class="btn btn-primary btn-sm" id="pdf-unlock-btn" type="button">
+              <i class="bi bi-unlock me-1"></i>Unlock
+            </button>
+          </div>
+          <div id="pdf-unlock-error" class="small text-danger mt-2 d-none">
+            <i class="bi bi-x-circle me-1"></i>Incorrect password. Try again.
+          </div>
+        </div>
+        {% endif %}
+
         {# ── Version History ── #}
         {% if versions %}
         <hr class="my-3">
@@ -181,3 +207,71 @@
 
 </div>
 {% endblock %}
+
+{% if is_encrypted %}
+{% block scripts %}
+<script>
+(function () {
+  const unlockBtn = document.getElementById('pdf-unlock-btn');
+  const pwInput   = document.getElementById('pdf-password-input');
+  const errorEl   = document.getElementById('pdf-unlock-error');
+  const frame     = document.getElementById('pdf-frame');
+  if (!unlockBtn) return;
+
+  const SESSION_KEY = 'dv_pdf_pw_{{ doc.id }}';
+
+  function showPdf(blob) {
+    const url = URL.createObjectURL(blob);
+    frame.src = url;
+    frame.style.display = 'block';
+    document.getElementById('pdf-unlock-section').style.display = 'none';
+  }
+
+  // If the password was already used this browser session, re-unlock silently
+  const savedPw = sessionStorage.getItem(SESSION_KEY);
+  if (savedPw) {
+    const form = new FormData();
+    form.append('csrf_token', '{{ csrf_token() }}');
+    form.append('pdf_password', savedPw);
+    fetch('{{ url_for("doc_preview_file_unlocked", doc_id=doc.id) }}', { method: 'POST', body: form })
+      .then(r => r.ok ? r.blob() : null)
+      .then(blob => { if (blob) showPdf(blob); })
+      .catch(() => {});
+  }
+
+  async function tryUnlock() {
+    const password = pwInput.value;
+    if (!password) { pwInput.focus(); return; }
+    unlockBtn.disabled = true;
+    unlockBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Unlocking…';
+    errorEl.classList.add('d-none');
+
+    try {
+      const form = new FormData();
+      form.append('csrf_token', '{{ csrf_token() }}');
+      form.append('pdf_password', password);
+      const resp = await fetch('{{ url_for("doc_preview_file_unlocked", doc_id=doc.id) }}', {
+        method: 'POST',
+        body: form,
+      });
+      if (resp.ok) {
+        sessionStorage.setItem(SESSION_KEY, password);
+        showPdf(await resp.blob());
+      } else {
+        errorEl.classList.remove('d-none');
+      }
+    } catch (err) {
+      errorEl.textContent = err.message || 'Network error — could not unlock PDF.';
+      errorEl.classList.remove('d-none');
+    } finally {
+      unlockBtn.disabled = false;
+      unlockBtn.innerHTML = '<i class="bi bi-unlock me-1"></i>Unlock';
+    }
+  }
+
+  unlockBtn.addEventListener('click', tryUnlock);
+  pwInput.addEventListener('keydown', e => { if (e.key === 'Enter') tryUnlock(); });
+})();
+</script>
+{% endblock %}
+{% endif %}

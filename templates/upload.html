@@ -60,6 +60,19 @@
                       placeholder="Optional notes…"></textarea>
           </div>
 
+          <div class="mb-3">
+            <label for="folder_id" class="form-label small fw-semibold">Folder</label>
+            <select id="folder_id" name="folder_id" class="form-select">
+              <option value="">— Root (no folder) —</option>
+              {% for f in folder_tree %}
+                <option value="{{ f.id }}"
+                  {% if folder_id == f.id %}selected{% endif %}>
+                  {{ '　' * f.depth }}{% if f.depth > 0 %}└ {% endif %}{{ f.name }}
+                </option>
+              {% endfor %}
+            </select>
+          </div>
+
           <div class="row g-3 mb-3">
             <div class="col-md-6">
               <label for="category_id" class="form-label small fw-semibold">Category</label>

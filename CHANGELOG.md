@@ -6,6 +6,23 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [1.3.0] - 2026-06-13
+
+### Added
+
+- **Folders** — create unlimited nested folders to organise documents; folders can contain subfolders (any depth)
+- Folder breadcrumb navigation on the dashboard — click any level to jump back
+- Folder cards grid on the dashboard showing subfolder names and document counts
+- New Folder button (modal) on every folder view; Rename and Delete actions on the current folder
+- Delete folder is blocked if it contains any documents (prevents accidental data loss)
+- Folder selector dropdown on Upload and Edit forms — place or move a document into any folder
+- Global search/filter ignores folder scope so you can find any document across the whole vault
+- **Password-protected PDF preview** — encrypted PDFs show a lock overlay; enter the document password to decrypt in-memory and view without downloading
+- `pypdf` dependency added for PDF encryption detection and in-memory decryption (no temp files written)
+- Safe DB migration adds `folders` table and `folder_id` column to existing `documents` rows on first run
+
+---
+
 ## [1.2.1] - 2026-05-08
 
 ### Changed

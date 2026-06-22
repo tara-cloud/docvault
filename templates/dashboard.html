@@ -67,9 +67,9 @@
     </div>
     <div class="col-6 col-md-auto">
       <select name="expiry_filter" class="form-select" style="min-width:150px">
-        <option value=""       {% if not expiry_filter              %}selected{% endif %}>All Documents</option>
-        <option value="expiring" {% if expiry_filter == 'expiring'  %}selected{% endif %}>Expiring (90d)</option>
-        <option value="expired"  {% if expiry_filter == 'expired'   %}selected{% endif %}>Expired</option>
+        <option value=""         {% if not expiry_filter             %}selected{% endif %}>All Documents</option>
+        <option value="expiring" {% if expiry_filter == 'expiring'   %}selected{% endif %}>Expiring (90d)</option>
+        <option value="expired"  {% if expiry_filter == 'expired'    %}selected{% endif %}>Expired</option>
       </select>
     </div>
     <div class="col-auto d-flex gap-2">
@@ -78,22 +78,103 @@
         <i class="bi bi-x-lg"></i>
       </a>
     </div>
-    <div class="col-auto ms-md-auto">
-      <a href="{{ url_for('upload_get') }}" class="btn btn-success d-flex align-items-center gap-1">
+    <div class="col-auto ms-md-auto d-flex gap-2">
+      {% if not searching %}
+        <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1"
+                data-bs-toggle="modal" data-bs-target="#newFolderModal">
+          <i class="bi bi-folder-plus"></i> <span class="d-none d-sm-inline">New Folder</span>
+        </button>
+      {% endif %}
+      <a href="{{ url_for('upload_get', folder_id=folder_id) }}" class="btn btn-success d-flex align-items-center gap-1">
         <i class="bi bi-cloud-upload"></i> <span>Upload</span>
       </a>
     </div>
   </div>
 </form>
 
+{# ── Breadcrumb ── #}
+{% if breadcrumb or current_folder %}
+<nav aria-label="breadcrumb" class="mb-3">
+  <ol class="breadcrumb dv-breadcrumb mb-0">
+    {# Root crumb — also a drop target to move docs out of any folder #}
+    <li class="breadcrumb-item">
+      <a href="{{ url_for('dashboard') }}" class="text-decoration-none"
+         data-drop-folder-id=""
+         data-drop-label="Root">
+        <i class="bi bi-house-door me-1"></i>All Files
+      </a>
+    </li>
+    {% for crumb in breadcrumb %}
+      {% if not loop.last %}
+        <li class="breadcrumb-item">
+          <a href="{{ url_for('dashboard', folder_id=crumb.id) }}" class="text-decoration-none"
+             data-drop-folder-id="{{ crumb.id }}"
+             data-drop-label="{{ crumb.name }}">{{ crumb.name }}</a>
+        </li>
+      {% else %}
+        <li class="breadcrumb-item active" aria-current="page">{{ crumb.name }}</li>
+      {% endif %}
+    {% endfor %}
+  </ol>
+</nav>
+
+{# Folder actions bar #}
+{% if current_folder %}
+<div class="d-flex align-items-center gap-2 mb-3">
+  <span class="small fw-semibold" style="color:var(--dv-muted)">
+    <i class="bi bi-folder2-open me-1" style="color:#d29922"></i>{{ current_folder.name }}
+  </span>
+  <button type="button" class="btn btn-outline-secondary btn-sm"
+          data-bs-toggle="modal" data-bs-target="#renameFolderModal">
+    <i class="bi bi-pencil"></i> Rename
+  </button>
+  <form method="POST" action="{{ url_for('folder_delete', folder_id=current_folder.id) }}"
+        onsubmit="return confirm('Delete folder \'{{ current_folder.name }}\'? It must be empty.')">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+    <button type="submit" class="btn btn-sm"
+            style="border:1px solid rgba(248,81,73,0.3);color:#f85149;background:var(--dv-surface-2)">
+      <i class="bi bi-trash"></i> Delete Folder
+    </button>
+  </form>
+</div>
+{% endif %}
+{% endif %}
+
+{# ── Subfolders grid ── #}
+{% if subfolders and not searching %}
+<div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-2 mb-4">
+  {% for sf in subfolders %}
+  <div class="col">
+    {# Wrapper is the drop target; inner <a> handles navigation click #}
+    <div class="folder-drop-target"
+         data-folder-id="{{ sf.id }}"
+         data-folder-name="{{ sf.name }}">
+      <a href="{{ url_for('dashboard', folder_id=sf.id) }}" class="text-decoration-none">
+        <div class="card folder-card h-100 text-center py-3 px-2">
+          <div class="folder-icon mb-2">
+            <i class="bi bi-folder-fill"></i>
+          </div>
+          <div class="small fw-semibold text-truncate" style="color:var(--dv-text)">{{ sf.name }}</div>
+          <div class="small mt-1" style="color:var(--dv-muted)">
+            {{ sf.doc_count }} doc{{ 's' if sf.doc_count != 1 }}
+          </div>
+        </div>
+      </a>
+    </div>
+  </div>
+  {% endfor %}
+</div>
+{% endif %}
+
 {# ── Document grid ── #}
 {% if docs %}
-<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3">
+<div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" id="doc-grid">
   {% for doc in docs %}
   {% set dtype = 'pdf' if doc.mime_type == 'application/pdf' else ('image' if doc.mime_type.startswith('image') else ('docx' if 'word' in doc.mime_type else 'other')) %}
-  <div class="col">
-    <div class="card h-100 doc-card" data-type="{{ dtype }}">
+  <div class="col doc-col" data-doc-id="{{ doc.id }}" data-doc-name="{{ doc.display_name }}">
+    <div class="card h-100 doc-card" data-type="{{ dtype }}" draggable="true">
       <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-grip-vertical drag-handle" title="Drag to move to folder"></i>
         <i class="bi bi-{{ doc.category_icon }}" style="color:var(--dv-accent)"></i>
         <span class="badge" style="background:var(--dv-surface-2);color:var(--dv-muted);border:1px solid var(--dv-border)">
           {{ doc.category_name }}
@@ -167,21 +248,27 @@
   {% endfor %}
 </div>
 
-{% else %}
+{% elif not subfolders or searching %}
 <div class="empty-state">
   <div class="empty-icon">
     {% if q or selected_category_id or expiry_filter %}
       <i class="bi bi-search" style="color:var(--dv-muted)"></i>
+    {% elif current_folder %}
+      <i class="bi bi-folder2-open" style="color:var(--dv-muted)"></i>
     {% else %}
       <i class="bi bi-safe2" style="color:var(--dv-muted)"></i>
     {% endif %}
   </div>
   <h5 class="fw-semibold mb-1">
-    {% if q or selected_category_id or expiry_filter %}No results found{% else %}No documents yet{% endif %}
+    {% if q or selected_category_id or expiry_filter %}No results found
+    {% elif current_folder %}This folder is empty
+    {% else %}No documents yet{% endif %}
   </h5>
   <p class="small mb-3" style="color:var(--dv-muted)">
     {% if q or selected_category_id or expiry_filter %}
       Try adjusting your search or filters.
+    {% elif current_folder %}
+      Upload a document or create a subfolder.
     {% else %}
       Upload your first document to get started.
     {% endif %}
@@ -189,11 +276,183 @@
   {% if q or selected_category_id or expiry_filter %}
     <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">Clear Filters</a>
   {% else %}
-    <a href="{{ url_for('upload_get') }}" class="btn btn-primary btn-sm">
+    <a href="{{ url_for('upload_get', folder_id=folder_id) }}" class="btn btn-primary btn-sm">
       <i class="bi bi-cloud-upload me-1"></i>Upload Document
     </a>
   {% endif %}
 </div>
 {% endif %}
 
+{# ── New Folder Modal ── #}
+<div class="modal fade" id="newFolderModal" tabindex="-1" aria-labelledby="newFolderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="background:var(--dv-surface);border:1px solid var(--dv-border)">
+      <form method="POST" action="{{ url_for('folder_create') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="parent_id" value="{{ folder_id or '' }}" />
+        <div class="modal-header" style="border-color:var(--dv-border)">
+          <h6 class="modal-title fw-semibold" id="newFolderModalLabel">
+            <i class="bi bi-folder-plus me-2" style="color:#d29922"></i>New Folder
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label for="newFolderName" class="form-label small fw-semibold">Folder Name</label>
+          <input type="text" id="newFolderName" name="name" class="form-control"
+                 placeholder="e.g. 2025 Taxes" required autofocus maxlength="100" />
+          {% if current_folder %}
+          <div class="form-text mt-2">
+            <i class="bi bi-folder-fill me-1" style="color:#d29922"></i>
+            Inside: <strong>{{ current_folder.name }}</strong>
+          </div>
+          {% endif %}
+        </div>
+        <div class="modal-footer" style="border-color:var(--dv-border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-folder-plus me-1"></i>Create
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+
+{# ── Rename Folder Modal ── #}
+{% if current_folder %}
+<div class="modal fade" id="renameFolderModal" tabindex="-1" aria-labelledby="renameFolderModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-sm modal-dialog-centered">
+    <div class="modal-content" style="background:var(--dv-surface);border:1px solid var(--dv-border)">
+      <form method="POST" action="{{ url_for('folder_rename', folder_id=current_folder.id) }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <div class="modal-header" style="border-color:var(--dv-border)">
+          <h6 class="modal-title fw-semibold" id="renameFolderModalLabel">
+            <i class="bi bi-pencil me-2"></i>Rename Folder
+          </h6>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <label for="renameFolderName" class="form-label small fw-semibold">New Name</label>
+          <input type="text" id="renameFolderName" name="name" class="form-control"
+                 value="{{ current_folder.name }}" required autofocus maxlength="100" />
+        </div>
+        <div class="modal-footer" style="border-color:var(--dv-border)">
+          <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+          <button type="submit" class="btn btn-primary btn-sm">
+            <i class="bi bi-check-lg me-1"></i>Rename
+          </button>
+        </div>
+      </form>
+    </div>
+  </div>
+</div>
+{% endif %}
+
+{% endblock %}
+
+{% block scripts %}
+<script>
+(function () {
+  const CSRF = '{{ csrf_token() }}';
+  let dragDocId   = null;
+  let dragDocName = null;
+
+  // ── Drag source: doc cards ────────────────────────────────────────────────
+  document.querySelectorAll('.doc-col').forEach(col => {
+    const card = col.querySelector('.doc-card');
+    card.addEventListener('dragstart', e => {
+      dragDocId   = col.dataset.docId;
+      dragDocName = col.dataset.docName;
+      e.dataTransfer.effectAllowed = 'move';
+      e.dataTransfer.setData('text/plain', dragDocId);
+      col.classList.add('dragging');
+    });
+    card.addEventListener('dragend', () => {
+      col.classList.remove('dragging');
+    });
+  });
+
+  // ── Drop targets: folder cards ────────────────────────────────────────────
+  document.querySelectorAll('.folder-drop-target').forEach(wrapper => {
+    wrapper.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      wrapper.classList.add('folder-drag-over');
+    });
+    wrapper.addEventListener('dragleave', e => {
+      if (!wrapper.contains(e.relatedTarget)) {
+        wrapper.classList.remove('folder-drag-over');
+      }
+    });
+    wrapper.addEventListener('drop', e => {
+      e.preventDefault();
+      wrapper.classList.remove('folder-drag-over');
+      if (!dragDocId) return;
+      moveDoc(dragDocId, dragDocName, wrapper.dataset.folderId, wrapper.dataset.folderName);
+    });
+  });
+
+  // ── Drop targets: breadcrumb links ───────────────────────────────────────
+  document.querySelectorAll('[data-drop-folder-id]').forEach(el => {
+    el.addEventListener('dragover', e => {
+      e.preventDefault();
+      e.dataTransfer.dropEffect = 'move';
+      el.classList.add('breadcrumb-drag-over');
+    });
+    el.addEventListener('dragleave', () => el.classList.remove('breadcrumb-drag-over'));
+    el.addEventListener('drop', e => {
+      e.preventDefault();
+      el.classList.remove('breadcrumb-drag-over');
+      if (!dragDocId) return;
+      // Prevent navigation click from firing on drop
+      e.stopPropagation();
+      moveDoc(dragDocId, dragDocName, el.dataset.dropFolderId, el.dataset.dropLabel);
+    });
+  });
+
+  // ── Move API call ─────────────────────────────────────────────────────────
+  async function moveDoc(docId, docName, folderId, folderName) {
+    const body = new FormData();
+    body.append('csrf_token', CSRF);
+    body.append('folder_id', folderId);          // "" = root
+    try {
+      const resp = await fetch(`/doc/${docId}/move`, { method: 'POST', body });
+      if (resp.ok) {
+        // Remove card from grid immediately
+        const col = document.querySelector(`.doc-col[data-doc-id="${docId}"]`);
+        if (col) {
+          col.style.transition = 'opacity 0.2s';
+          col.style.opacity = '0';
+          setTimeout(() => col.remove(), 220);
+        }
+        showToast('success', `"${docName}" moved to ${folderName || 'Root'}.`);
+      } else {
+        showToast('danger', 'Move failed — please try again.');
+      }
+    } catch {
+      showToast('danger', 'Network error — move failed.');
+    }
+  }
+
+  // ── Mini toast helper (reuse base.html pattern) ───────────────────────────
+  function showToast(cat, msg) {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const icons  = { success:'check-circle-fill', danger:'x-circle-fill' };
+    const colors = { success:'#3fb950', danger:'#f85149' };
+    const el = document.createElement('div');
+    el.className = `toast ${cat}`;
+    el.setAttribute('role', 'alert');
+    el.innerHTML = `
+      <div class="toast-body d-flex align-items-start gap-2 py-3 px-3">
+        <i class="bi bi-${icons[cat]} mt-1 flex-shrink-0" style="color:${colors[cat]}"></i>
+        <span class="flex-grow-1 small">${msg}</span>
+        <button type="button" class="btn-close btn-close-white btn-sm ms-1" data-bs-dismiss="toast"></button>
+      </div>`;
+    container.appendChild(el);
+    new bootstrap.Toast(el, { delay: 3500 }).show();
+    el.addEventListener('hidden.bs.toast', () => el.remove());
+  }
+})();
+</script>
 {% endblock %}
