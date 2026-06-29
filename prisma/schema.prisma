@@ -1,0 +1,76 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model Category {
+  id        Int        @id @default(autoincrement())
+  name      String     @unique
+  slug      String     @unique
+  icon      String     @default("folder")
+  isDefault Boolean    @default(false) @map("is_default")
+  documents Document[]
+
+  @@map("categories")
+}
+
+model Folder {
+  id        Int       @id @default(autoincrement())
+  name      String
+  parentId  Int?      @map("parent_id")
+  createdAt String    @map("created_at")
+  parent    Folder?   @relation("FolderTree", fields: [parentId], references: [id])
+  children  Folder[]  @relation("FolderTree")
+  documents Document[]
+
+  @@map("folders")
+}
+
+model Document {
+  id           Int               @id @default(autoincrement())
+  uuid         String            @unique
+  originalName String            @map("original_name")
+  displayName  String            @map("display_name")
+  description  String?
+  categoryId   Int               @default(7) @map("category_id")
+  folderId     Int?              @map("folder_id")
+  tags         String?
+  fileExt      String            @map("file_ext")
+  fileSize     Int               @map("file_size")
+  mimeType     String            @map("mime_type")
+  expiryDate   String?           @map("expiry_date")
+  uploadedAt   String            @map("uploaded_at")
+  versionNum   Int               @default(1) @map("version_num")
+  category     Category          @relation(fields: [categoryId], references: [id])
+  folder       Folder?           @relation(fields: [folderId], references: [id])
+  versions     DocumentVersion[]
+
+  @@map("documents")
+}
+
+model DocumentVersion {
+  id           Int      @id @default(autoincrement())
+  documentId   Int      @map("document_id")
+  versionNum   Int      @map("version_num")
+  uuid         String   @unique
+  originalName String   @map("original_name")
+  fileExt      String   @map("file_ext")
+  fileSize     Int      @map("file_size")
+  mimeType     String   @map("mime_type")
+  versionNote  String?  @map("version_note")
+  replacedAt   String   @map("replaced_at")
+  document     Document @relation(fields: [documentId], references: [id])
+
+  @@map("document_versions")
+}
+
+model Setting {
+  key   String @id
+  value String
+
+  @@map("settings")
+}
