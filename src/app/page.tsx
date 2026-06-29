@@ -49,9 +49,10 @@ function DashboardInner() {
   const [expFilter, setExpFilter]= useState(sp.get("expiry_filter") ?? "");
   const [folderId, setFolderId] = useState<string>(sp.get("folder_id") ?? "");
   const [breadcrumb, setBreadcrumb] = useState<{ id: number; name: string }[]>([]);
-  const [dragDocId, setDragDocId]   = useState<number | null>(null);
+  const [dragDocId, setDragDocId]     = useState<number | null>(null);
   const [dragDocName, setDragDocName] = useState("");
-  const [qpDoc, setQpDoc]       = useState<Doc | null>(null);
+  const [allFolders, setAllFolders]   = useState<{ id: number; name: string; parentId: number | null }[]>([]);
+  const [qpDoc, setQpDoc]             = useState<Doc | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const searching = !!(q || catId || expFilter);
@@ -78,12 +79,14 @@ function DashboardInner() {
     if (expFilter) params.set("expiry_filter", expFilter);
     if (!searching && folderId) params.set("folder_id", folderId);
 
-    const [dataRes, catRes] = await Promise.all([
+    const [dataRes, catRes, folderRes] = await Promise.all([
       fetch(`/api/docs?${params}`),
       fetch("/api/categories"),
+      fetch("/api/folders"),
     ]);
     setData(await dataRes.json());
     setCategories(await catRes.json());
+    setAllFolders(await folderRes.json());
     if (!searching) loadFolderBreadcrumb(folderId);
   }, [q, catId, expFilter, folderId, searching, loadFolderBreadcrumb]);
 
@@ -108,13 +111,16 @@ function DashboardInner() {
     e.preventDefault(); load();
   }
 
-  async function moveDoc(docId: number, docName: string, toFolderId: number | null) {
+  async function moveDoc(docId: number, docName: string, toFolderId: number | null, folderName?: string) {
     const res = await fetch(`/api/docs/${docId}/move`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ folderId: toFolderId }),
     });
-    if (res.ok) { showToast("success", `"${docName}" moved.`); load(); }
+    if (res.ok) {
+      showToast("success", `"${docName}" moved to ${folderName ?? "Root"}.`);
+      load();
+    }
     else showToast("danger", "Move failed.");
   }
 
@@ -286,6 +292,8 @@ function DashboardInner() {
                 onDelete={deleteDoc}
                 onDragStart={(id, name) => { setDragDocId(id); setDragDocName(name); }}
                 onQuickPreview={setQpDoc}
+                onMove={moveDoc}
+                folders={allFolders}
               />
             ))}
           </div>
@@ -326,14 +334,17 @@ function StatCard({ icon, color, bg, value, label, clickable }: {
   );
 }
 
-function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview }: {
+function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview, onMove, folders }: {
   doc: Doc; viewMode: "grid"|"list";
   onDelete: (id: number, name: string) => void;
   onDragStart: (id: number, name: string) => void;
   onQuickPreview: (doc: Doc) => void;
+  onMove: (docId: number, docName: string, folderId: number | null, folderName: string) => void;
+  folders: { id: number; name: string; parentId: number | null }[];
 }) {
   const dtype = fileType(doc.mimeType);
   const canPreview = doc.mimeType === "application/pdf" || doc.mimeType.startsWith("image/");
+  const [moveOpen, setMoveOpen] = useState(false);
 
   return (
     <div className="card doc-card" data-type={dtype} draggable
@@ -411,10 +422,86 @@ function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview }: {
         <a href={`/api/docs/${doc.id}/download`} className="dv-btn-outline" style={{ padding:"4px 8px", display:"flex", alignItems:"center" }}>
           <i className="bi bi-download" />
         </a>
+        <button type="button" onClick={() => setMoveOpen(true)}
+          style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 8px", cursor:"pointer" }}
+          title="Move to folder">
+          <i className="bi bi-folder-symlink" />
+        </button>
         <button type="button" onClick={() => onDelete(doc.id, doc.displayName)}
           style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-red)", borderRadius:"var(--dv-r)", padding:"4px 8px", cursor:"pointer" }}>
           <i className="bi bi-trash" />
         </button>
+      </div>
+
+      {/* Move to folder bottom sheet */}
+      {moveOpen && (
+        <MoveFolderSheet
+          docName={doc.displayName}
+          currentFolderId={doc.folder?.id ?? null}
+          folders={folders}
+          onMove={(folderId, folderName) => { onMove(doc.id, doc.displayName, folderId, folderName); setMoveOpen(false); }}
+          onClose={() => setMoveOpen(false)}
+        />
+      )}
+    </div>
+  );
+}
+
+function MoveFolderSheet({ docName, currentFolderId, folders, onMove, onClose }: {
+  docName: string;
+  currentFolderId: number | null;
+  folders: { id: number; name: string; parentId: number | null }[];
+  onMove: (folderId: number | null, folderName: string) => void;
+  onClose: () => void;
+}) {
+  function buildTree(parentId: number | null, depth: number): { id: number | null; name: string; depth: number }[] {
+    const result: { id: number | null; name: string; depth: number }[] = [];
+    if (parentId === null) result.push({ id: null, name: "Root (no folder)", depth: 0 });
+    folders.filter(f => f.parentId === parentId).forEach(f => {
+      result.push({ id: f.id, name: f.name, depth });
+      result.push(...buildTree(f.id, depth + 1));
+    });
+    return result;
+  }
+  const tree = buildTree(null, 0);
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(0,0,0,.6)", backdropFilter:"blur(6px)" }}
+      onClick={onClose}>
+      <div
+        style={{ position:"absolute", bottom:0, left:0, right:0, background:"var(--dv-surface)", borderRadius:"20px 20px 0 0", maxHeight:"70vh", display:"flex", flexDirection:"column", paddingBottom:"env(safe-area-inset-bottom)" }}
+        onClick={e => e.stopPropagation()}
+      >
+        {/* Handle */}
+        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:"var(--dv-border-2)" }} />
+        </div>
+        <div style={{ padding:"0 16px 12px", borderBottom:"1px solid var(--dv-border)" }}>
+          <div style={{ fontWeight:700, fontSize:15 }}>Move to Folder</div>
+          <div style={{ fontSize:12, color:"var(--dv-muted)", marginTop:2, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{docName}</div>
+        </div>
+        <div style={{ overflowY:"auto", padding:"8px 0" }}>
+          {tree.map(item => (
+            <button key={item.id ?? "root"} type="button"
+              onClick={() => onMove(item.id, item.name)}
+              style={{
+                width:"100%", background: item.id === currentFolderId ? "var(--dv-accent-dim)" : "none",
+                border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:10,
+                padding:"12px 16px", textAlign:"left",
+                paddingLeft: 16 + item.depth * 16,
+                color: item.id === currentFolderId ? "var(--dv-accent)" : "var(--dv-text)",
+                fontSize:14,
+              }}
+            >
+              <i className={`bi bi-${item.id === null ? "house-door" : "folder"}`}
+                style={{ color: item.id === null ? "var(--dv-muted)" : "var(--dv-yellow)", flexShrink:0 }} />
+              {item.name}
+              {item.id === currentFolderId && (
+                <i className="bi bi-check2" style={{ marginLeft:"auto", color:"var(--dv-accent)" }} />
+              )}
+            </button>
+          ))}
+        </div>
       </div>
     </div>
   );
