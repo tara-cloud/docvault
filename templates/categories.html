@@ -3,7 +3,7 @@
 
 {% block content %}
 
-<div class="d-flex align-items-center gap-2 mb-4">
+<div class="d-flex align-items-center justify-content-between mb-4">
   <h5 class="mb-0 fw-semibold">Categories</h5>
 </div>
 
@@ -12,49 +12,45 @@
   {# ── Category list ── #}
   <div class="col-12 col-lg-8">
     <div class="card">
-      <div class="card-header py-2 px-3">
-        <span class="small fw-semibold" style="color:var(--dv-muted)">All Categories</span>
-      </div>
+      <div class="card-header"><span class="small fw-semibold" style="color:var(--dv-muted)">All Categories</span></div>
       <div class="card-body p-0">
-        <table class="table mb-0" style="color:var(--dv-text)">
+        <table class="table mb-0">
           <thead>
-            <tr style="border-color:var(--dv-border)">
-              <th class="px-3 py-2 small fw-semibold" style="color:var(--dv-muted);background:var(--dv-surface-2)">Category</th>
-              <th class="px-3 py-2 small fw-semibold text-center" style="color:var(--dv-muted);background:var(--dv-surface-2);width:100px">Documents</th>
-              <th class="px-3 py-2" style="background:var(--dv-surface-2);width:60px"></th>
+            <tr>
+              <th class="px-3 py-2">Category</th>
+              <th class="px-3 py-2 text-center" style="width:100px">Documents</th>
+              <th class="px-3 py-2" style="width:60px"></th>
             </tr>
           </thead>
           <tbody>
             {% for cat in categories %}
-            <tr style="border-color:var(--dv-border)">
-              <td class="px-3 py-3 d-flex align-items-center gap-2" style="border-color:var(--dv-border)">
-                <div style="width:32px;height:32px;background:var(--dv-surface-2);border:1px solid var(--dv-border);border-radius:8px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
-                  <i class="bi bi-{{ cat.icon }}" style="color:var(--dv-accent)"></i>
-                </div>
-                <div>
-                  <span class="fw-semibold small">{{ cat.name }}</span>
-                  {% if cat.is_default %}
-                    <span class="ms-2 small" style="color:var(--dv-muted)">default</span>
-                  {% endif %}
+            <tr>
+              <td class="px-3 py-3">
+                <div class="d-flex align-items-center gap-3">
+                  <div class="cat-icon-box">
+                    <i class="bi bi-{{ cat.icon }}" style="color:var(--dv-accent)"></i>
+                  </div>
+                  <div>
+                    <span class="fw-semibold small" style="color:var(--dv-text)">{{ cat.name }}</span>
+                    {% if cat.is_default %}
+                      <span class="ms-2 small" style="color:var(--dv-muted)">default</span>
+                    {% endif %}
+                  </div>
                 </div>
               </td>
-              <td class="px-3 py-3 text-center" style="border-color:var(--dv-border)">
+              <td class="px-3 py-3 text-center">
                 <a href="{{ url_for('dashboard', category_id=cat.id) }}"
-                   class="text-decoration-none small fw-semibold"
-                   style="color:var(--dv-accent)">
+                   class="text-decoration-none small fw-semibold" style="color:var(--dv-accent)">
                   {{ cat.doc_count }}
                 </a>
               </td>
-              <td class="px-3 py-3 text-end" style="border-color:var(--dv-border)">
+              <td class="px-3 py-3 text-end">
                 {% if not cat.is_default %}
-                  <form method="POST"
-                        action="{{ url_for('category_delete', cat_id=cat.id) }}"
-                        class="d-inline"
+                  <form method="POST" action="{{ url_for('category_delete', cat_id=cat.id) }}" class="d-inline"
                         onsubmit="return confirm('Delete category \'{{ cat.name }}\'?')">
                     <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                    <button type="submit"
-                            class="btn btn-sm"
-                            style="color:#f85149;background:var(--dv-surface-2);border:1px solid var(--dv-border)"
+                    <button type="submit" class="btn btn-sm"
+                            style="color:var(--dv-red);background:var(--dv-surface-2);border:1px solid var(--dv-border)"
                             {% if cat.doc_count > 0 %}disabled title="{{ cat.doc_count }} document(s) assigned"{% endif %}>
                       <i class="bi bi-trash"></i>
                     </button>
@@ -75,40 +71,34 @@
     </div>
   </div>
 
-  {# ── Add category form ── #}
+  {# ── Add category ── #}
   <div class="col-12 col-lg-4">
     <div class="card">
-      <div class="card-header py-2 px-3">
-        <span class="small fw-semibold" style="color:var(--dv-muted)">Add Category</span>
-      </div>
+      <div class="card-header"><span class="small fw-semibold" style="color:var(--dv-muted)">Add Category</span></div>
       <div class="card-body p-4">
         <form method="POST" action="{{ url_for('category_add') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-
           <div class="mb-3">
-            <label for="name" class="form-label small fw-semibold">Name <span class="text-danger">*</span></label>
-            <input type="text" id="name" name="name" class="form-control"
-                   placeholder="e.g. Vehicle" required />
+            <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+            <input type="text" id="name" name="name" class="form-control" placeholder="e.g. Vehicle" required />
           </div>
-
           <div class="mb-4">
-            <label for="icon" class="form-label small fw-semibold">
+            <label for="icon" class="form-label d-flex align-items-center gap-2">
               Icon
               <a href="https://icons.getbootstrap.com/" target="_blank" rel="noopener"
-                 class="text-decoration-none ms-1" style="color:var(--dv-muted);font-size:0.75rem">
-                <i class="bi bi-box-arrow-up-right"></i> Browse icons
+                 class="text-decoration-none ms-auto" style="color:var(--dv-muted);font-size:11px">
+                <i class="bi bi-box-arrow-up-right"></i> Browse
               </a>
             </label>
             <div class="input-group">
-              <span class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border);width:40px">
+              <span class="input-group-text" style="width:42px">
                 <i id="icon-preview" class="bi bi-folder" style="color:var(--dv-accent)"></i>
               </span>
               <input type="text" id="icon" name="icon" class="form-control"
                      value="folder" placeholder="e.g. car-front" />
             </div>
-            <div class="form-text">Bootstrap icon name (without the <code>bi-</code> prefix).</div>
+            <div class="form-text">Bootstrap icon name without the <code>bi-</code> prefix.</div>
           </div>
-
           <button type="submit" class="btn btn-primary w-100">
             <i class="bi bi-plus-lg me-1"></i>Add Category
           </button>

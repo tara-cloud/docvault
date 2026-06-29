@@ -9,25 +9,16 @@
       <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
       </a>
-      <h4 class="mb-0 fw-semibold">Upload Document</h4>
+      <h5 class="mb-0 fw-semibold">Upload Document</h5>
     </div>
 
     {# Step indicator #}
-    <div class="d-flex align-items-center gap-0 mb-4" id="upload-steps">
-      <div class="d-flex align-items-center gap-2 step-item active" id="step-1">
-        <div class="step-dot">1</div>
-        <span class="small fw-semibold">Choose File</span>
-      </div>
-      <div class="step-line flex-grow-1"></div>
-      <div class="d-flex align-items-center gap-2 step-item" id="step-2">
-        <div class="step-dot">2</div>
-        <span class="small fw-semibold">Details</span>
-      </div>
-      <div class="step-line flex-grow-1"></div>
-      <div class="d-flex align-items-center gap-2 step-item" id="step-3">
-        <div class="step-dot">3</div>
-        <span class="small fw-semibold">Upload</span>
-      </div>
+    <div class="upload-steps mb-4">
+      <div class="step-item active" id="step-1"><div class="step-dot">1</div><span class="small fw-semibold">Choose File</span></div>
+      <div class="step-line"></div>
+      <div class="step-item" id="step-2"><div class="step-dot">2</div><span class="small fw-semibold">Details</span></div>
+      <div class="step-line"></div>
+      <div class="step-item" id="step-3"><div class="step-dot">3</div><span class="small fw-semibold">Upload</span></div>
     </div>
 
     <div class="card">
@@ -35,21 +26,17 @@
         <form method="POST" action="{{ url_for('upload_post') }}" enctype="multipart/form-data" id="upload-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
-          {# ── Drag-drop zone ── #}
           <div class="mb-4" id="drop-wrapper">
-            <label for="file" class="form-label small fw-semibold">File <span class="text-danger">*</span></label>
+            <label for="file" class="form-label">File <span class="text-danger">*</span></label>
             <div class="upload-zone" id="upload-zone">
               <input type="file" id="file" name="file"
                      accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx" required />
-              <div id="zone-content">
-                <i class="bi bi-cloud-upload upload-icon d-block mb-2"></i>
-                <div class="fw-semibold mb-1" style="color:var(--dv-text)">Drop file here or click to browse</div>
-                <div class="small" style="color:var(--dv-muted)">PDF, PNG, JPG, GIF, WEBP, DOCX &mdash; max 50 MB</div>
-              </div>
+              <i class="bi bi-cloud-arrow-up-fill upload-icon d-block mb-2"></i>
+              <div class="fw-semibold mb-1" style="color:var(--dv-text)">Drop file here or click to browse</div>
+              <div class="small" style="color:var(--dv-muted)">PDF, PNG, JPG, GIF, WEBP, DOCX — max 50 MB</div>
             </div>
           </div>
 
-          {# ── File chosen preview ── #}
           <div id="file-preview" class="d-none mb-4">
             <div class="d-flex align-items-center gap-3 p-3 rounded-3"
                  style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
@@ -65,26 +52,23 @@
           </div>
 
           <div class="mb-3">
-            <label for="display_name" class="form-label small fw-semibold">
-              Document Name <span class="text-danger">*</span>
-            </label>
+            <label for="display_name" class="form-label">Document Name <span class="text-danger">*</span></label>
             <input type="text" id="display_name" name="display_name" class="form-control"
                    placeholder="e.g. Passport, Health Insurance Card" required />
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label small fw-semibold">Description</label>
+            <label for="description" class="form-label">Description</label>
             <textarea id="description" name="description" class="form-control" rows="2"
                       placeholder="Optional notes…"></textarea>
           </div>
 
           <div class="mb-3">
-            <label for="folder_id" class="form-label small fw-semibold">Folder</label>
+            <label for="folder_id" class="form-label">Folder</label>
             <select id="folder_id" name="folder_id" class="form-select">
               <option value="">— Root (no folder) —</option>
               {% for f in folder_tree %}
-                <option value="{{ f.id }}"
-                  {% if folder_id == f.id %}selected{% endif %}>
+                <option value="{{ f.id }}" {% if folder_id == f.id %}selected{% endif %}>
                   {{ '　' * f.depth }}{% if f.depth > 0 %}└ {% endif %}{{ f.name }}
                 </option>
               {% endfor %}
@@ -93,30 +77,29 @@
 
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label for="category_id" class="form-label small fw-semibold">Category</label>
+              <label for="category_id" class="form-label">Category</label>
               <select id="category_id" name="category_id" class="form-select">
                 {% for cat in categories %}
-                  <option value="{{ cat.id }}" {% if cat.slug == 'other' %}selected{% endif %}>
-                    {{ cat.name }}
-                  </option>
+                  <option value="{{ cat.id }}" {% if cat.slug == 'other' %}selected{% endif %}>{{ cat.name }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label small fw-semibold d-flex align-items-center gap-2">
+              <label class="form-label d-flex align-items-center gap-2">
                 Expiry Date
-                <span class="d-flex align-items-center gap-1" style="font-weight:normal;color:var(--dv-muted)">
+                <span class="d-flex align-items-center gap-1 fw-normal" style="color:var(--dv-muted)">
                   <input type="checkbox" id="has-expiry" class="form-check-input m-0" aria-label="Has expiry date" />
                   <span class="small">Has expiry</span>
                 </span>
               </label>
-              <input type="date" id="expiry_date" name="expiry_date" class="form-control d-none" disabled aria-label="Expiry date" />
-              <div class="form-text">Enable for ID cards, licenses, insurance, etc.</div>
+              <input type="date" id="expiry_date" name="expiry_date" class="form-control d-none"
+                     disabled aria-label="Expiry date" />
+              <div class="form-text">Enable for IDs, licenses, insurance, etc.</div>
             </div>
           </div>
 
           <div class="mb-4">
-            <label for="tag-text" class="form-label small fw-semibold">Tags</label>
+            <label for="tag-text" class="form-label">Tags</label>
             <div class="tag-input-box" id="tag-box">
               <input type="hidden" name="tags" id="tags-hidden" />
               <input type="text" id="tag-text" class="tag-input-real"
@@ -125,20 +108,17 @@
             <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag.</div>
           </div>
 
-          {# ── Upload progress ── #}
           <div class="upload-progress-wrap mb-3" id="upload-progress-wrap">
-            <div class="d-flex align-items-center justify-content-between mb-1">
-              <span class="small fw-semibold" style="color:var(--dv-text)" id="upload-status">Uploading…</span>
+            <div class="d-flex justify-content-between mb-1">
+              <span class="small fw-semibold" id="upload-status">Uploading…</span>
               <span class="small" style="color:var(--dv-muted)" id="upload-pct">0%</span>
             </div>
-            <div class="progress">
-              <div class="progress-bar" id="upload-bar" style="width:0%"></div>
-            </div>
+            <div class="progress"><div class="progress-bar" id="upload-bar" style="width:0%"></div></div>
           </div>
 
           <div class="d-flex gap-2">
             <button type="submit" class="btn btn-primary px-4" id="upload-btn">
-              <i class="bi bi-cloud-upload me-1"></i> Upload
+              <i class="bi bi-cloud-arrow-up-fill me-1"></i>Upload
             </button>
             <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
           </div>
@@ -153,42 +133,39 @@
 {% block scripts %}
 <script>
 (function () {
-  const fileInput   = document.getElementById('file');
-  const zone        = document.getElementById('upload-zone');
-  const preview     = document.getElementById('file-preview');
-  const fileName    = document.getElementById('file-name');
-  const fileSize    = document.getElementById('file-size');
-  const fileIcon    = document.getElementById('file-icon');
-  const clearBtn    = document.getElementById('clear-file');
-  const nameField   = document.getElementById('display_name');
-  const form        = document.getElementById('upload-form');
-  const uploadBtn   = document.getElementById('upload-btn');
-  const progressWrap = document.getElementById('upload-progress-wrap');
-  const progressBar = document.getElementById('upload-bar');
-  const progressPct = document.getElementById('upload-pct');
-  const statusLabel = document.getElementById('upload-status');
-
-  // Step indicator
+  const fileInput  = document.getElementById('file');
+  const zone       = document.getElementById('upload-zone');
+  const preview    = document.getElementById('file-preview');
+  const fileName   = document.getElementById('file-name');
+  const fileSize   = document.getElementById('file-size');
+  const fileIcon   = document.getElementById('file-icon');
+  const clearBtn   = document.getElementById('clear-file');
+  const nameField  = document.getElementById('display_name');
+  const form       = document.getElementById('upload-form');
+  const uploadBtn  = document.getElementById('upload-btn');
+  const progWrap   = document.getElementById('upload-progress-wrap');
+  const progBar    = document.getElementById('upload-bar');
+  const progPct    = document.getElementById('upload-pct');
+  const statusLbl  = document.getElementById('upload-status');
   const step1 = document.getElementById('step-1');
   const step2 = document.getElementById('step-2');
   const step3 = document.getElementById('step-3');
 
   function setStep(n) {
-    [step1, step2, step3].forEach((s, i) => {
-      s.classList.toggle('active', i < n);
-      s.classList.toggle('done', i < n - 1);
+    [[step1,1],[step2,2],[step3,3]].forEach(([s,i]) => {
+      s.classList.toggle('active', i <= n);
+      s.classList.toggle('done',   i < n);
     });
   }
 
-  const typeIcons = { pdf:'file-earmark-pdf', image:'file-earmark-image', docx:'file-earmark-word' };
-  const typeColors = { pdf:'#f85149', image:'#3fb950', docx:'#58a6ff' };
+  const typeIcons  = { pdf:'file-earmark-pdf-fill', image:'file-earmark-image-fill', docx:'file-earmark-word-fill' };
+  const typeColors = { pdf:'var(--dv-red)', image:'var(--dv-green)', docx:'var(--dv-accent)' };
 
   function formatBytes(b) {
     if (b < 1024) return b + ' B';
     if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
     return (b/1048576).toFixed(1) + ' MB';
   }
-
   function getType(name) {
     const ext = name.split('.').pop().toLowerCase();
     if (ext === 'pdf') return 'pdf';
@@ -196,171 +173,93 @@
     if (ext === 'docx') return 'docx';
     return 'other';
   }
-
   function showFile(file) {
-    const type = getType(file.name);
+    const t = getType(file.name);
     fileName.textContent = file.name;
     fileSize.textContent = formatBytes(file.size);
-    fileIcon.className = `bi bi-${typeIcons[type] || 'file-earmark'} fs-2`;
-    fileIcon.style.color = typeColors[type] || 'var(--dv-muted)';
+    fileIcon.className   = `bi bi-${typeIcons[t] || 'file-earmark'} fs-2`;
+    fileIcon.style.color = typeColors[t] || 'var(--dv-muted)';
     zone.parentElement.classList.add('file-chosen');
     preview.classList.remove('d-none');
     if (!nameField.value) nameField.value = file.name.replace(/\.[^.]+$/, '');
     setStep(2);
   }
-
   function clearFile() {
-    fileInput.value = '';
-    preview.classList.add('d-none');
+    fileInput.value = ''; preview.classList.add('d-none');
     zone.parentElement.classList.remove('file-chosen');
-    nameField.value = '';
-    setStep(1);
+    nameField.value = ''; setStep(1);
   }
 
-  fileInput.addEventListener('change', function () {
-    if (this.files.length) showFile(this.files[0]);
-  });
+  fileInput.addEventListener('change', function () { if (this.files.length) showFile(this.files[0]); });
   clearBtn.addEventListener('click', clearFile);
-
-  // Drag-drop
-  zone.addEventListener('dragover', e => { e.preventDefault(); zone.classList.add('dragover'); });
+  zone.addEventListener('dragover',  e => { e.preventDefault(); zone.classList.add('dragover'); });
   zone.addEventListener('dragleave', () => zone.classList.remove('dragover'));
   zone.addEventListener('drop', e => {
-    e.preventDefault();
-    zone.classList.remove('dragover');
+    e.preventDefault(); zone.classList.remove('dragover');
     const file = e.dataTransfer.files[0];
-    if (file) {
-      const dt = new DataTransfer();
-      dt.items.add(file);
-      fileInput.files = dt.files;
-      showFile(file);
-    }
+    if (file) { const dt = new DataTransfer(); dt.items.add(file); fileInput.files = dt.files; showFile(file); }
   });
 
-  // XHR upload with progress
   form.addEventListener('submit', function (e) {
     e.preventDefault();
     if (!fileInput.files.length) { fileInput.reportValidity(); return; }
     if (!nameField.value.trim()) { nameField.reportValidity(); return; }
-
     setStep(3);
     uploadBtn.disabled = true;
     uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Uploading…';
-    progressWrap.classList.add('visible');
-
+    progWrap.classList.add('visible');
     const data = new FormData(form);
     const xhr  = new XMLHttpRequest();
-
     xhr.upload.addEventListener('progress', ev => {
-      if (ev.lengthComputable) {
-        const pct = Math.round((ev.loaded / ev.total) * 100);
-        progressBar.style.width = pct + '%';
-        progressPct.textContent = pct + '%';
-        if (pct === 100) {
-          statusLabel.textContent = 'Processing…';
-          progressBar.style.background = '#3fb950';
-        }
-      }
+      if (!ev.lengthComputable) return;
+      const pct = Math.round(ev.loaded / ev.total * 100);
+      progBar.style.width = pct + '%'; progPct.textContent = pct + '%';
+      if (pct === 100) { statusLbl.textContent = 'Processing…'; progBar.style.background = 'var(--dv-green)'; }
     });
-
     xhr.addEventListener('load', () => {
       if (xhr.status >= 200 && xhr.status < 400) {
-        statusLabel.textContent = 'Done!';
-        progressBar.style.width = '100%';
-        // Follow redirect from Flask
+        statusLbl.textContent = 'Done!';
         window.location.href = xhr.responseURL || '{{ url_for("dashboard") }}';
       } else {
-        statusLabel.textContent = 'Upload failed.';
-        progressBar.style.background = '#f85149';
-        uploadBtn.disabled = false;
-        uploadBtn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Try Again';
+        statusLbl.textContent = 'Upload failed.'; progBar.style.background = 'var(--dv-red)';
+        uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i>Try Again';
       }
     });
-
     xhr.addEventListener('error', () => {
-      statusLabel.textContent = 'Network error.';
-      progressBar.style.background = '#f85149';
-      uploadBtn.disabled = false;
-      uploadBtn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Try Again';
+      statusLbl.textContent = 'Network error.'; progBar.style.background = 'var(--dv-red)';
+      uploadBtn.disabled = false; uploadBtn.innerHTML = '<i class="bi bi-cloud-arrow-up-fill me-1"></i>Try Again';
     });
-
     xhr.open('POST', form.action);
     xhr.send(data);
   });
 
-  // Tag chip widget
-  const box    = document.getElementById('tag-box');
-  const input  = document.getElementById('tag-text');
-  const hidden = document.getElementById('tags-hidden');
-  const tags   = [];
-
+  // Tags
+  const box = document.getElementById('tag-box'), input = document.getElementById('tag-text'), hidden = document.getElementById('tags-hidden');
+  const tags = [];
   function renderChips() {
     box.querySelectorAll('.tag-chip').forEach(el => el.remove());
     tags.forEach((tag, i) => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
+      const chip = document.createElement('span'); chip.className = 'tag-chip';
       chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
       chip.querySelector('button').addEventListener('click', () => { tags.splice(i,1); renderChips(); syncHidden(); });
       input.before(chip);
     });
   }
   function syncHidden() { hidden.value = tags.join(','); }
-  function addTag(raw) {
-    const val = raw.trim().toLowerCase();
-    if (val && !tags.includes(val)) { tags.push(val); renderChips(); syncHidden(); }
-    input.value = '';
-  }
+  function addTag(raw) { const v = raw.trim().toLowerCase(); if (v && !tags.includes(v)) { tags.push(v); renderChips(); syncHidden(); } input.value = ''; }
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(this.value); }
     else if (e.key === 'Backspace' && !this.value && tags.length) { tags.pop(); renderChips(); syncHidden(); }
   });
   input.addEventListener('blur', function() { if (this.value.trim()) addTag(this.value); });
 
-  // Expiry date checkbox
-  const hasExpiry  = document.getElementById('has-expiry');
-  const expiryDate = document.getElementById('expiry_date');
-  hasExpiry.addEventListener('change', function () {
+  // Expiry
+  const hasExpiry = document.getElementById('has-expiry'), expiryDate = document.getElementById('expiry_date');
+  hasExpiry.addEventListener('change', function() {
     expiryDate.classList.toggle('d-none', !this.checked);
     expiryDate.disabled = !this.checked;
     if (!this.checked) expiryDate.value = '';
   });
 })();
 </script>
-
-<style>
-.step-item { color: var(--dv-muted); white-space: nowrap; }
-.step-item.active { color: var(--dv-text); }
-.step-dot {
-  width: 28px; height: 28px;
-  border-radius: 50%;
-  background: var(--dv-surface-2);
-  border: 2px solid var(--dv-border);
-  display: flex; align-items: center; justify-content: center;
-  font-size: 0.75rem; font-weight: 700;
-  color: var(--dv-muted);
-  transition: all 0.2s ease;
-  flex-shrink: 0;
-}
-.step-item.active .step-dot {
-  background: var(--dv-accent);
-  border-color: var(--dv-accent);
-  color: #fff;
-  box-shadow: 0 0 0 3px var(--dv-accent-glow);
-}
-.step-item.done .step-dot {
-  background: #3fb950;
-  border-color: #3fb950;
-  color: #fff;
-}
-.step-item.done .step-dot::before { content: '✓'; font-size: 0.7rem; }
-.step-item.done .step-dot span { display: none; }
-.step-line {
-  height: 2px;
-  background: var(--dv-border);
-  margin: 0 0.5rem;
-  min-width: 20px;
-  transition: background 0.2s ease;
-}
-.step-item.done + .step-line { background: #3fb950; }
-</style>
 {% endblock %}

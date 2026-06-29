@@ -15,7 +15,7 @@
   {# ── Preview panel ── #}
   <div class="col-12 col-lg-8">
     <div class="card h-100">
-      <div class="card-header d-flex align-items-center justify-content-between py-2 px-3">
+      <div class="card-header d-flex align-items-center justify-content-between">
         <span class="small fw-semibold" style="color:var(--dv-muted)">Preview</span>
         <a href="{{ url_for('doc_download', doc_id=doc.id) }}"
            class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
@@ -30,25 +30,22 @@
           {% else %}
           <embed src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
                  type="application/pdf"
-                 style="width:100%; height:75vh; border:none; display:block;" />
+                 style="width:100%;height:75vh;border:none;display:block;" />
           {% endif %}
-        {% elif doc.mime_type in ['image/png', 'image/jpeg', 'image/gif', 'image/webp'] %}
+        {% elif doc.mime_type in ['image/png','image/jpeg','image/gif','image/webp'] %}
           <div class="d-flex align-items-center justify-content-center p-4"
-               style="min-height:50vh; background:var(--dv-surface-2)">
+               style="min-height:50vh;background:var(--dv-surface-2)">
             <img src="{{ url_for('doc_preview_file', doc_id=doc.id) }}"
-                 class="img-fluid rounded-3 shadow"
-                 alt="{{ doc.display_name }}"
-                 style="max-height:70vh; object-fit:contain;" />
+                 class="img-fluid rounded-3 shadow" alt="{{ doc.display_name }}"
+                 style="max-height:70vh;object-fit:contain;" />
           </div>
         {% else %}
           <div class="d-flex flex-column align-items-center justify-content-center gap-3"
-               style="min-height:40vh; background:var(--dv-surface-2)">
+               style="min-height:40vh;background:var(--dv-surface-2)">
             <div style="width:72px;height:72px;background:var(--dv-surface);border:1px solid var(--dv-border);border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:2rem;">
-              <i class="bi bi-file-earmark-word" style="color:#58a6ff"></i>
+              <i class="bi bi-file-earmark-word" style="color:var(--dv-accent)"></i>
             </div>
-            <p class="mb-0 small" style="color:var(--dv-muted)">
-              No preview for {{ doc.file_ext[1:] | upper }} files
-            </p>
+            <p class="mb-0 small" style="color:var(--dv-muted)">No preview for {{ doc.file_ext[1:] | upper }} files</p>
             <a href="{{ url_for('doc_download', doc_id=doc.id) }}" class="btn btn-primary btn-sm">
               <i class="bi bi-download me-1"></i>Download to View
             </a>
@@ -63,10 +60,9 @@
     <div class="card preview-sidebar">
       <div class="card-body p-4">
 
-        {# Category + expiry #}
         <div class="d-flex align-items-center gap-2 flex-wrap mb-3">
           <span class="badge d-flex align-items-center gap-1"
-                style="background:var(--dv-surface-2);color:var(--dv-text);border:1px solid var(--dv-border);padding:5px 10px">
+                style="background:var(--dv-surface-2);color:var(--dv-text);border:1px solid var(--dv-border);padding:5px 10px;font-size:12px">
             <i class="bi bi-{{ doc.category_icon }}" style="color:var(--dv-accent)"></i>
             {{ doc.category_name }}
           </span>
@@ -86,9 +82,8 @@
         {% if doc.tags_list %}
           <div class="d-flex flex-wrap gap-1 mb-3">
             {% for tag in doc.tags_list %}
-              <a href="{{ url_for('dashboard', tag=tag) }}"
-                 class="text-decoration-none"
-                 style="font-size:0.75rem;padding:3px 10px;background:#162033;color:#79b8ff;border:1px solid #1e3a5f;border-radius:20px">
+              <a href="{{ url_for('dashboard', tag=tag) }}" class="text-decoration-none"
+                 style="font-size:11px;padding:2px 8px;background:var(--dv-accent-dim);color:var(--dv-accent);border:1px solid rgba(59,130,246,0.2);border-radius:20px">
                 {{ tag }}
               </a>
             {% endfor %}
@@ -99,44 +94,46 @@
 
         <ul class="list-unstyled small mb-4" style="color:var(--dv-muted)">
           <li class="d-flex align-items-center gap-2 mb-2">
-            <i class="bi bi-file-earmark" style="width:16px"></i>
-            <span>{{ doc.file_ext[1:] | upper }} &bull; {{ doc.file_size_human }}</span>
+            <i class="bi bi-file-earmark" style="width:14px;color:var(--dv-subtle)"></i>
+            <span>{{ doc.file_ext[1:] | upper }} · {{ doc.file_size_human }}</span>
           </li>
           <li class="d-flex align-items-center gap-2 mb-2">
-            <i class="bi bi-calendar-plus" style="width:16px"></i>
+            <i class="bi bi-calendar-plus" style="width:14px;color:var(--dv-subtle)"></i>
             <span>Uploaded {{ doc.uploaded_at[:10] }}</span>
           </li>
           {% if doc.expiry_date %}
           <li class="d-flex align-items-center gap-2">
-            <i class="bi bi-calendar-x" style="width:16px"></i>
+            <i class="bi bi-calendar-x" style="width:14px;color:var(--dv-subtle)"></i>
             <span>Expires {{ doc.expiry_date }}</span>
           </li>
           {% endif %}
         </ul>
 
         <div class="d-grid gap-2">
-          <a href="{{ url_for('doc_edit_get', doc_id=doc.id) }}" class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center gap-1">
+          <a href="{{ url_for('doc_edit_get', doc_id=doc.id) }}"
+             class="btn btn-outline-secondary btn-sm d-flex align-items-center justify-content-center gap-1">
             <i class="bi bi-pencil"></i> Edit Details
           </a>
           <form method="POST" action="{{ url_for('doc_delete', doc_id=doc.id) }}"
                 onsubmit="return confirm('Delete \'{{ doc.display_name }}\'? This cannot be undone.')">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
             <button type="submit" class="btn btn-sm w-100 d-flex align-items-center justify-content-center gap-1"
-                    style="border:1px solid rgba(248,81,73,0.3);color:#f85149;background:var(--dv-surface-2)">
+                    style="border:1px solid rgba(239,68,68,0.3);color:var(--dv-red);background:var(--dv-surface-2)">
               <i class="bi bi-trash"></i> Delete
             </button>
           </form>
         </div>
 
-        {# ── Unlock form (password-protected PDFs only) ── #}
+        {# ── PDF unlock ── #}
         {% if is_encrypted %}
         <div id="pdf-unlock-section">
-        <hr class="my-3">
+          <hr class="my-3">
           <div class="d-flex align-items-center gap-2 mb-2">
-            <i class="bi bi-file-earmark-lock2" style="color:#d29922"></i>
+            <i class="bi bi-file-earmark-lock2" style="color:var(--dv-yellow)"></i>
             <span class="small fw-semibold">Password-Protected PDF</span>
           </div>
           <div class="input-group input-group-sm">
+            <label for="pdf-password-input" class="visually-hidden">PDF password</label>
             <input type="password" id="pdf-password-input" class="form-control"
                    placeholder="Document password…" autocomplete="off" />
             <button class="btn btn-primary btn-sm" id="pdf-unlock-btn" type="button">
@@ -156,7 +153,7 @@
           <span class="small fw-semibold" style="color:var(--dv-muted)">
             <i class="bi bi-clock-history me-1"></i>Version History
           </span>
-          <span class="badge" style="background:var(--dv-surface-2);border:1px solid var(--dv-border);color:var(--dv-muted);font-size:0.7rem">
+          <span class="badge" style="background:var(--dv-surface-2);border:1px solid var(--dv-border);color:var(--dv-muted);font-size:10px">
             v{{ doc.version_num }} current
           </span>
         </div>
@@ -168,7 +165,7 @@
                 <div class="small fw-semibold" style="color:var(--dv-text)">
                   v{{ v.version_num }}
                   <span class="fw-normal" style="color:var(--dv-muted)">
-                    &mdash; {{ v.file_ext[1:] | upper }} &bull; {{ v.file_size_human }}
+                    — {{ v.file_ext[1:] | upper }} · {{ v.file_size_human }}
                   </span>
                 </div>
                 <div class="small" style="color:var(--dv-muted)">{{ v.replaced_at[:10] }}</div>
@@ -179,18 +176,14 @@
               <div class="d-flex flex-column gap-1 flex-shrink-0">
                 <a href="{{ url_for('doc_version_download', doc_id=doc.id, ver_id=v.id) }}"
                    class="btn btn-sm py-0 px-2"
-                   style="background:var(--dv-surface-2);border:1px solid var(--dv-border);color:var(--dv-text)"
-                   title="Download v{{ v.version_num }}">
+                   style="background:var(--dv-surface-2);border:1px solid var(--dv-border);color:var(--dv-text)">
                   <i class="bi bi-download"></i>
                 </a>
-                <form method="POST"
-                      action="{{ url_for('doc_version_restore', doc_id=doc.id, ver_id=v.id) }}"
-                      onsubmit="return confirm('Restore v{{ v.version_num }}? The current file will be archived as a version.')">
+                <form method="POST" action="{{ url_for('doc_version_restore', doc_id=doc.id, ver_id=v.id) }}"
+                      onsubmit="return confirm('Restore v{{ v.version_num }}?')">
                   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-                  <button type="submit"
-                          class="btn btn-sm py-0 px-2"
-                          style="background:var(--dv-surface-2);border:1px solid rgba(26,115,232,0.3);color:#58a6ff"
-                          title="Restore v{{ v.version_num }}">
+                  <button type="submit" class="btn btn-sm py-0 px-2"
+                          style="background:var(--dv-surface-2);border:1px solid rgba(59,130,246,0.3);color:var(--dv-accent)">
                     <i class="bi bi-arrow-counterclockwise"></i>
                   </button>
                 </form>
@@ -204,7 +197,6 @@
       </div>
     </div>
   </div>
-
 </div>
 {% endblock %}
 
@@ -222,12 +214,10 @@
 
   function showPdf(blob) {
     const url = URL.createObjectURL(blob);
-    frame.src = url;
-    frame.style.display = 'block';
+    frame.src = url; frame.style.display = 'block';
     document.getElementById('pdf-unlock-section').style.display = 'none';
   }
 
-  // If the password was already used this browser session, re-unlock silently
   const savedPw = sessionStorage.getItem(SESSION_KEY);
   if (savedPw) {
     const form = new FormData();
@@ -245,23 +235,15 @@
     unlockBtn.disabled = true;
     unlockBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1"></span>Unlocking…';
     errorEl.classList.add('d-none');
-
     try {
       const form = new FormData();
       form.append('csrf_token', '{{ csrf_token() }}');
       form.append('pdf_password', password);
-      const resp = await fetch('{{ url_for("doc_preview_file_unlocked", doc_id=doc.id) }}', {
-        method: 'POST',
-        body: form,
-      });
-      if (resp.ok) {
-        sessionStorage.setItem(SESSION_KEY, password);
-        showPdf(await resp.blob());
-      } else {
-        errorEl.classList.remove('d-none');
-      }
+      const resp = await fetch('{{ url_for("doc_preview_file_unlocked", doc_id=doc.id) }}', { method: 'POST', body: form });
+      if (resp.ok) { sessionStorage.setItem(SESSION_KEY, password); showPdf(await resp.blob()); }
+      else { errorEl.classList.remove('d-none'); }
     } catch (err) {
-      errorEl.textContent = err.message || 'Network error — could not unlock PDF.';
+      errorEl.textContent = err.message || 'Network error.';
       errorEl.classList.remove('d-none');
     } finally {
       unlockBtn.disabled = false;

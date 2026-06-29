@@ -11,48 +11,40 @@
 
     {# ── Change Password ── #}
     <div class="card mb-4">
-      <div class="card-header d-flex align-items-center gap-2 py-2 px-3">
-        <i class="bi bi-key" style="color:var(--dv-accent)"></i>
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-key-fill" style="color:var(--dv-accent)"></i>
         <span class="small fw-semibold" style="color:var(--dv-muted)">Change Password</span>
       </div>
       <div class="card-body p-4">
         <form method="POST" action="{{ url_for('settings_password') }}" id="pw-form">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-
           <div class="mb-3">
-            <label for="current_password" class="form-label small fw-semibold">Current Password</label>
+            <label for="current_password" class="form-label">Current Password</label>
             <div class="input-group">
-              <span class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border)">
-                <i class="bi bi-lock" style="color:var(--dv-muted)"></i>
-              </span>
+              <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
               <input type="password" id="current_password" name="current_password"
                      class="form-control" placeholder="Enter current password" required />
             </div>
           </div>
-
           <div class="mb-3">
-            <label for="new_password" class="form-label small fw-semibold">New Password</label>
+            <label for="new_password" class="form-label">New Password</label>
             <div class="input-group">
-              <span class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border)">
-                <i class="bi bi-lock-fill" style="color:var(--dv-muted)"></i>
-              </span>
+              <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
               <input type="password" id="new_password" name="new_password"
                      class="form-control" placeholder="At least 6 characters" required minlength="6" />
             </div>
           </div>
-
           <div class="mb-4">
-            <label for="confirm_password" class="form-label small fw-semibold">Confirm New Password</label>
+            <label for="confirm_password" class="form-label">Confirm New Password</label>
             <div class="input-group">
-              <span class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border)">
-                <i class="bi bi-lock-fill" style="color:var(--dv-muted)"></i>
-              </span>
+              <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
               <input type="password" id="confirm_password" name="confirm_password"
                      class="form-control" placeholder="Repeat new password" required minlength="6" />
             </div>
-            <div id="pw-match-hint" class="form-text d-none" style="color:#f85149">Passwords do not match.</div>
+            <div id="pw-match-hint" class="form-text d-none" style="color:var(--dv-red)">
+              <i class="bi bi-x-circle me-1"></i>Passwords do not match.
+            </div>
           </div>
-
           <button type="submit" class="btn btn-primary px-4" id="pw-submit">
             <i class="bi bi-check-lg me-1"></i>Update Password
           </button>
@@ -60,10 +52,10 @@
       </div>
     </div>
 
-    {# ── Theme ── #}
+    {# ── Appearance ── #}
     <div class="card mb-4">
-      <div class="card-header d-flex align-items-center gap-2 py-2 px-3">
-        <i class="bi bi-palette" style="color:var(--dv-accent)"></i>
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-palette-fill" style="color:var(--dv-accent)"></i>
         <span class="small fw-semibold" style="color:var(--dv-muted)">Appearance</span>
       </div>
       <div class="card-body p-4">
@@ -71,7 +63,6 @@
         <form method="POST" action="{{ url_for('settings_theme') }}">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
           <div class="d-flex gap-3 mb-4 flex-wrap">
-
             <label class="theme-option {% if theme == 'dark' %}selected{% endif %}" for="theme-dark">
               <input type="radio" name="theme" id="theme-dark" value="dark" class="d-none"
                      {% if theme == 'dark' %}checked{% endif %} />
@@ -81,7 +72,6 @@
               </div>
               <span class="small mt-2 d-block text-center fw-semibold">Dark</span>
             </label>
-
             <label class="theme-option {% if theme == 'light' %}selected{% endif %}" for="theme-light">
               <input type="radio" name="theme" id="theme-light" value="light" class="d-none"
                      {% if theme == 'light' %}checked{% endif %} />
@@ -91,7 +81,6 @@
               </div>
               <span class="small mt-2 d-block text-center fw-semibold">Light</span>
             </label>
-
           </div>
           <button type="submit" class="btn btn-primary px-4">
             <i class="bi bi-palette me-1"></i>Apply Theme
@@ -102,18 +91,18 @@
 
     {# ── About ── #}
     <div class="card">
-      <div class="card-header d-flex align-items-center gap-2 py-2 px-3">
-        <i class="bi bi-info-circle" style="color:var(--dv-accent)"></i>
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-info-circle-fill" style="color:var(--dv-accent)"></i>
         <span class="small fw-semibold" style="color:var(--dv-muted)">About</span>
       </div>
       <div class="card-body p-4">
         <div class="d-flex align-items-center gap-3">
-          <div style="width:48px;height:48px;background:var(--dv-surface-2);border:1px solid var(--dv-border);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.5rem">
-            <i class="bi bi-safe2-fill text-primary"></i>
+          <div style="width:44px;height:44px;background:var(--dv-accent-dim);border:1px solid rgba(59,130,246,0.3);border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:1.4rem">
+            <i class="bi bi-safe2-fill" style="color:var(--dv-accent)"></i>
           </div>
           <div>
             <div class="fw-semibold">DocVault</div>
-            <div class="small" style="color:var(--dv-muted)">Personal document vault for CasaOS</div>
+            <div class="small" style="color:var(--dv-muted)">Personal document vault — k3s on Raspberry Pi</div>
           </div>
         </div>
       </div>
@@ -124,39 +113,12 @@
 {% endblock %}
 
 {% block scripts %}
-<style>
-  .theme-option {
-    cursor: pointer;
-    border-radius: 12px;
-    padding: 8px;
-    border: 2px solid var(--dv-border);
-    transition: border-color 0.15s;
-  }
-  .theme-option:hover { border-color: var(--dv-accent); }
-  .theme-option.selected { border-color: var(--dv-accent); }
-  .theme-preview {
-    width: 120px;
-    height: 80px;
-    border-radius: 8px;
-    overflow: hidden;
-    border: 1px solid var(--dv-border);
-  }
-  .theme-preview-bar { height: 18px; }
-  .theme-preview-body { flex: 1; height: 62px; }
-  .dark-preview { background: #0d1117; }
-  .dark-preview .theme-preview-bar { background: #161b22; }
-  .dark-preview .theme-preview-body { background: #0d1117; }
-  .light-preview { background: #f8f9fa; }
-  .light-preview .theme-preview-bar { background: #e9ecef; }
-  .light-preview .theme-preview-body { background: #f8f9fa; }
-</style>
 <script>
 (function () {
   const newPw  = document.getElementById('new_password');
   const confPw = document.getElementById('confirm_password');
   const hint   = document.getElementById('pw-match-hint');
   const submit = document.getElementById('pw-submit');
-
   function checkMatch() {
     if (!confPw.value) { hint.classList.add('d-none'); submit.disabled = false; return; }
     const match = newPw.value === confPw.value;
@@ -166,7 +128,6 @@
   newPw.addEventListener('input', checkMatch);
   confPw.addEventListener('input', checkMatch);
 
-  // Select theme option on radio click
   document.querySelectorAll('.theme-option input[type=radio]').forEach(radio => {
     radio.addEventListener('change', function () {
       document.querySelectorAll('.theme-option').forEach(el => el.classList.remove('selected'));
