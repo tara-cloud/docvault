@@ -115,8 +115,24 @@ export async function POST(req: NextRequest) {
 
     const id = randomUUID();
     dest = docPath(id, ext);
-    const buffer = Buffer.from(await file.arrayBuffer());
-    fs.writeFileSync(dest, buffer);
+
+    // Stream file to disk instead of buffering entire file in RAM
+    // This avoids OOM on the Pi when uploading large files
+    const fileStream = file.stream();
+    const writeStream = fs.createWriteStream(dest);
+    const reader = fileStream.getReader();
+    await new Promise<void>((resolve, reject) => {
+      writeStream.on("error", reject);
+      writeStream.on("finish", resolve);
+      function pump() {
+        reader.read().then(({ done, value }) => {
+          if (done) { writeStream.end(); return; }
+          writeStream.write(value, (err) => { if (err) reject(err); else pump(); });
+        }).catch(reject);
+      }
+      pump();
+    });
+    const fileSize = fs.statSync(dest).size;
 
     const f = (k: string) => {
       const v = formData.get(k);
@@ -133,7 +149,7 @@ export async function POST(req: NextRequest) {
         folderId:     f("folder_id") ? Number(f("folder_id")) : null,
         tags:         normalizeTags(f("tags")),
         fileExt:      ext,
-        fileSize:     buffer.length,
+        fileSize:     fileSize,
         mimeType:     mime,
         expiryDate:   f("expiry_date") || null,
         uploadedAt:   new Date().toISOString(),
