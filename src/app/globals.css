@@ -640,11 +640,79 @@ code { color: var(--dv-accent); background: var(--dv-accent-dim); padding: 1px 5
   .search-bar .dv-btn-primary,
   .search-bar .dv-btn-outline { min-height: 36px !important; padding: 4px 10px !important; font-size: 13px !important; }
 
-  /* Stat cards: 3 cols → scroll row on very small */
+  /* Hide grid/list toggle — mobile always uses compact list */
+  .view-toggle { display: none !important; }
+
+  /* Stat cards: 3 cols */
   .stat-grid { grid-template-columns: repeat(3,1fr); gap: 8px; }
 
-  /* Doc grid: 1 col */
-  .doc-grid { grid-template-columns: 1fr !important; }
+  /* Doc cards: compact horizontal list on mobile */
+  .doc-grid {
+    display: flex !important;
+    flex-direction: column;
+    gap: 6px !important;
+  }
+  .doc-grid .card.doc-card {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    min-height: 56px;
+  }
+  .doc-grid .card.doc-card .card-header {
+    width: 48px;
+    flex-shrink: 0;
+    border-bottom: none;
+    border-right: 1px solid var(--dv-border);
+    border-radius: var(--dv-r-lg) 0 0 var(--dv-r-lg) !important;
+    padding: 0 !important;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--dv-surface-2) !important;
+    flex-direction: column;
+    gap: 4px;
+    align-self: stretch;
+  }
+  /* Hide category name + drag handle + expiry badges in mobile list */
+  .doc-grid .card.doc-card .card-header .drag-handle,
+  .doc-grid .card.doc-card .card-header span,
+  .doc-grid .card.doc-card .card-header div { display: none; }
+  /* Show only category icon */
+  .doc-grid .card.doc-card .card-header > i:not(.drag-handle) { display: block !important; font-size: 16px; }
+  .doc-grid .card.doc-card .card-body {
+    flex: 1;
+    padding: 8px 10px !important;
+    min-width: 0;
+  }
+  /* Hide description, tags, size on mobile list */
+  .doc-grid .card.doc-card .card-body p,
+  .doc-grid .card.doc-card .card-body .flex-wrap { display: none !important; }
+  /* Compact meta row */
+  .doc-grid .card.doc-card .card-body div[style*="11px"] {
+    font-size: 10px !important;
+  }
+  .doc-grid .card.doc-card .card-footer {
+    flex-direction: column;
+    width: 44px;
+    flex-shrink: 0;
+    border-top: none;
+    border-left: 1px solid var(--dv-border);
+    border-radius: 0 var(--dv-r-lg) var(--dv-r-lg) 0 !important;
+    padding: 4px !important;
+    gap: 2px;
+    align-self: stretch;
+    justify-content: center;
+    background: var(--dv-surface-2) !important;
+  }
+  /* Footer: hide download button on mobile to save space */
+  .doc-grid .card.doc-card .card-footer a:nth-child(2) { display: none; }
+  .doc-grid .card.doc-card .card-footer a,
+  .doc-grid .card.doc-card .card-footer button {
+    flex: none !important;
+    padding: 4px !important;
+    font-size: 11px !important;
+    justify-content: center;
+  }
 
   /* Folder grid: 2 cols */
   .folder-grid { grid-template-columns: repeat(2, 1fr) !important; }

@@ -12,7 +12,7 @@ interface Folder    { id: number; name: string; parentId: number | null; docCoun
 interface Doc {
   id: number; displayName: string; description: string | null;
   fileExt: string; fileSizeHuman: string; mimeType: string;
-  uploadedAt: string; tagsList: string[];
+  uploadedAt: string; expiryDate: string | null; tagsList: string[];
   expiryStatus: string | null; daysUntilExpiry: number | null;
   category: { id: number; name: string; icon: string };
   folder: { id: number; name: string } | null;
@@ -382,9 +382,29 @@ function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview }: {
           </div>
         )}
         <div style={{ fontSize:11, color:"var(--dv-muted)" }}>
-          <i className="bi bi-hdd me-1" />{doc.fileSizeHuman}
+          {doc.expiryDate ? (
+            <>
+              <i className="bi bi-calendar-x me-1"
+                style={{ color: doc.expiryStatus === "expired" ? "var(--dv-red)"
+                  : doc.expiryStatus === "expiring-soon" ? "var(--dv-red)"
+                  : doc.expiryStatus === "expiry-warning" ? "var(--dv-yellow)"
+                  : "var(--dv-muted)" }} />
+              <span style={{ color: doc.expiryStatus === "expired" ? "var(--dv-red)"
+                : doc.expiryStatus === "expiring-soon" ? "var(--dv-red)"
+                : doc.expiryStatus === "expiry-warning" ? "var(--dv-yellow)"
+                : "var(--dv-muted)" }}>
+                {doc.expiryStatus === "expired" ? "Expired " : "Expires "}
+                {doc.expiryDate}
+              </span>
+            </>
+          ) : (
+            <>
+              <i className="bi bi-calendar3 me-1" />
+              {doc.uploadedAt.slice(0,10)}
+            </>
+          )}
           <span style={{ margin:"0 6px" }}>·</span>
-          <i className="bi bi-calendar3 me-1" />{doc.uploadedAt.slice(0,10)}
+          <i className="bi bi-hdd me-1" />{doc.fileSizeHuman}
         </div>
       </div>
 
