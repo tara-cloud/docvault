@@ -10,6 +10,8 @@ COPY . .
 RUN npx prisma generate
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
+# Ensure public dir exists even if empty (prevents COPY failure in runner)
+RUN mkdir -p /app/public
 
 FROM node:20-alpine AS runner
 WORKDIR /app
