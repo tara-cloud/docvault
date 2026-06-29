@@ -11,14 +11,14 @@ permissions:
   contents: write
 
 jobs:
+  # ── 1. Create a GitHub Release only when the version tag is new ──────────
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
     if: "!contains(github.event.head_commit.message, '[skip release]')"
     outputs:
-      tag: ${{ steps.version.outputs.tag }}
       version: ${{ steps.version.outputs.version }}
-      already_exists: ${{ steps.tag_check.outputs.exists }}
+      tag:     ${{ steps.version.outputs.tag }}
 
     steps:
       - uses: actions/checkout@v4
@@ -28,7 +28,7 @@ jobs:
         run: |
           VER=$(cat VERSION | tr -d '[:space:]')
           echo "version=$VER" >> $GITHUB_OUTPUT
-          echo "tag=v$VER" >> $GITHUB_OUTPUT
+          echo "tag=v$VER"    >> $GITHUB_OUTPUT
 
       - name: Check if tag already exists
         id: tag_check
@@ -45,29 +45,28 @@ jobs:
         run: |
           BODY=$(awk '/^## \[/{if(p)exit; p=1} p' CHANGELOG.md)
           echo "body<<EOF" >> $GITHUB_OUTPUT
-          echo "$BODY" >> $GITHUB_OUTPUT
-          echo "EOF" >> $GITHUB_OUTPUT
+          echo "$BODY"     >> $GITHUB_OUTPUT
+          echo "EOF"       >> $GITHUB_OUTPUT
 
       - name: Create tag and release
         if: steps.tag_check.outputs.exists == 'false'
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.version.outputs.tag }}
-          name: ${{ steps.version.outputs.tag }}
-          body: ${{ steps.changelog.outputs.body }}
+          name:     ${{ steps.version.outputs.tag }}
+          body:     ${{ steps.changelog.outputs.body }}
           draft: false
           prerelease: false
 
+  # ── 2. Always build & push the image on every push to main ───────────────
+  #    This runs regardless of whether a new release was created.
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
     needs: release
-    if: needs.release.outputs.already_exists != 'true'
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release.outputs.tag }}
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -96,16 +95,15 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
+  # ── 3. Always deploy to Pi via Helm on every push to main ────────────────
+  #    This runs regardless of whether a new release was created.
   helm-upgrade:
     name: Helm Upgrade on Pi
     runs-on: self-hosted
     needs: [release, docker]
-    if: needs.release.outputs.already_exists != 'true'
 
     steps:
       - uses: actions/checkout@v4
-        with:
-          ref: ${{ needs.release.outputs.tag }}
 
       - name: Setup kubeconfig
         run: |
@@ -118,6 +116,9 @@ jobs:
         run: |
           sudo ctr --namespace k8s.io images pull \
             docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
+
+      - name: Ensure namespace exists
+        run: kubectl create namespace docvault --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Restart existing deployment
         run: |
