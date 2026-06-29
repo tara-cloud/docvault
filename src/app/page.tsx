@@ -148,7 +148,7 @@ function DashboardInner() {
       <main style={{ padding: "24px 20px 48px", maxWidth: 1600, margin: "0 auto" }}>
 
         {/* Stat cards */}
-        <div style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
+        <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
           <StatCard icon="bi-file-earmark-text-fill" color="var(--dv-accent)" bg="rgba(59,130,246,.12)"
             value={data?.total ?? 0} label="Total Documents" />
           <a href="?expiry_filter=expiring" style={{ textDecoration:"none" }}>
@@ -244,7 +244,7 @@ function DashboardInner() {
 
         {/* Subfolders */}
         {!searching && data?.subfolders?.length ? (
-          <div style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))", gap:8, marginBottom:20 }}>
+          <div className="folder-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))", gap:8, marginBottom:20 }}>
             {data.subfolders.map(sf => (
               <div key={sf.id}
                 onDragOver={e => { e.preventDefault(); }}
