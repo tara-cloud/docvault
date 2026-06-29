@@ -661,6 +661,10 @@ code { color: var(--dv-accent); background: var(--dv-accent-dim); padding: 1px 5
 @media (max-width: 480px) {
   main { padding: 12px 12px calc(80px + env(safe-area-inset-bottom)) !important; }
 
+  /* Step labels: hide text, show only dots */
+  .step-label { display: none; }
+  .upload-steps { gap: 0; }
+
   /* Stat cards scroll horizontal */
   .stat-grid {
     display: flex !important;
@@ -677,6 +681,9 @@ code { color: var(--dv-accent); background: var(--dv-accent-dim); padding: 1px 5
 
   /* Category/folder grids: 2 col */
   .folder-grid { grid-template-columns: repeat(2, 1fr) !important; }
+
+  /* Form grids: 1 col */
+  .form-2col { grid-template-columns: 1fr !important; }
 
   /* Breadcrumb wrap */
   .dv-breadcrumb { font-size: 12px; padding: 5px 10px; }
