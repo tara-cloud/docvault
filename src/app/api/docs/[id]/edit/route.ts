@@ -63,9 +63,22 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       versionNum++;
       fs.mkdirSync(UPLOAD_DIR, { recursive: true });
       newFileDest = docPath(uuid, ext);
-      const buffer = Buffer.from(await newFile.arrayBuffer());
-      fs.writeFileSync(newFileDest, buffer);
-      fileSize = buffer.length;
+      // Stream to disk instead of buffering in RAM
+      const fileStream = newFile.stream();
+      const writeStream = fs.createWriteStream(newFileDest);
+      const reader = fileStream.getReader();
+      await new Promise<void>((resolve, reject) => {
+        writeStream.on("error", reject);
+        writeStream.on("finish", resolve);
+        function pump() {
+          reader.read().then(({ done, value }) => {
+            if (done) { writeStream.end(); return; }
+            writeStream.write(value, (err) => { if (err) reject(err); else pump(); });
+          }).catch(reject);
+        }
+        pump();
+      });
+      fileSize = fs.statSync(newFileDest).size;
     }
 
     // Always archive the previous state as a version
