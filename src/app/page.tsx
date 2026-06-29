@@ -415,18 +415,28 @@ function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview, onMove,
         </div>
       </div>
 
-      <div className="card-footer" style={{ display:"flex", gap:6, padding:"8px 10px" }}>
-        <Link href={`/doc/${doc.id}`} className="dv-btn-outline" style={{ flex:1, textAlign:"center", padding:"4px", textDecoration:"none", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
-          <i className="bi bi-eye" /> View
+      <div className="card-footer" style={{ display:"flex", gap:0, padding:0 }}>
+        <Link href={`/doc/${doc.id}`}
+          style={{ flex:1, textAlign:"center", padding:"10px 6px", textDecoration:"none", fontSize:12, fontWeight:600, color:"var(--dv-accent)", display:"flex", alignItems:"center", justifyContent:"center", gap:5, borderRight:"1px solid var(--dv-border)", transition:"background var(--dv-t)" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--dv-accent-dim)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "")}>
+          <i className="bi bi-eye" style={{ fontSize:14 }} />
+          <span>View</span>
         </Link>
-        <a href={`/api/docs/${doc.id}/download`} className="dv-btn-outline" style={{ padding:"4px 8px", display:"flex", alignItems:"center" }}
-          title="Download">
-          <i className="bi bi-download" />
+        <a href={`/api/docs/${doc.id}/download`}
+          style={{ flex:1, textAlign:"center", padding:"10px 6px", textDecoration:"none", fontSize:12, fontWeight:600, color:"var(--dv-subtle)", display:"flex", alignItems:"center", justifyContent:"center", gap:5, borderRight:"1px solid var(--dv-border)", transition:"background var(--dv-t)" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--dv-surface-3)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "")}>
+          <i className="bi bi-download" style={{ fontSize:14 }} />
+          <span className="btn-label-hide">Save</span>
         </a>
         <button type="button" onClick={() => setMoveOpen(true)}
-          style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 8px", cursor:"pointer" }}
+          style={{ flex:1, background:"none", border:"none", padding:"10px 6px", cursor:"pointer", fontSize:12, fontWeight:600, color:"var(--dv-subtle)", display:"flex", alignItems:"center", justifyContent:"center", gap:5, transition:"background var(--dv-t)", borderRadius:"0 0 var(--dv-r-lg) var(--dv-r-lg)" }}
+          onMouseEnter={e => (e.currentTarget.style.background = "var(--dv-surface-3)")}
+          onMouseLeave={e => (e.currentTarget.style.background = "")}
           title="Move to folder">
-          <i className="bi bi-folder-symlink" />
+          <i className="bi bi-folder-symlink" style={{ fontSize:14 }} />
+          <span className="btn-label-hide">Move</span>
         </button>
       </div>
 

@@ -6,6 +6,8 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 
+export const runtime = "nodejs";
+
 type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
@@ -50,8 +52,8 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       const ext  = path.extname(newFile.name).toLowerCase();
       const mime = ALLOWED_MIME[ext];
       if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
-      if (newFile.size > 50 * 1024 * 1024) {
-        return NextResponse.json({ error: "File exceeds 50 MB limit" }, { status: 413 });
+      if (newFile.size > 100 * 1024 * 1024) {
+        return NextResponse.json({ error: "File exceeds 100 MB limit" }, { status: 413 });
       }
       changeType   = "file";
       uuid         = randomUUID();

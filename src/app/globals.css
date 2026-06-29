@@ -197,6 +197,20 @@ main { animation: fadeUp .22s ease both; }
   background: var(--dv-surface-2) !important;
   border-top: 1px solid var(--dv-border) !important;
   border-radius: 0 0 var(--dv-r-lg) var(--dv-r-lg) !important;
+  overflow: hidden;
+}
+
+/* Doc card footer — borderless segmented buttons */
+.doc-card .card-footer {
+  background: var(--dv-surface-2) !important;
+}
+.doc-card .card-footer > * {
+  min-height: 40px;
+}
+
+/* Hide button text labels in list view and mobile compact */
+@media (max-width: 768px) {
+  .btn-label-hide { display: none; }
 }
 
 /* ─── Document Cards ─────────────────────────────────────────────────────── */
