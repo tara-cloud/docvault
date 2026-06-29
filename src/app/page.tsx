@@ -156,14 +156,14 @@ function DashboardInner() {
         {/* Stat cards */}
         <div className="stat-grid" style={{ display: "grid", gridTemplateColumns: "repeat(3,1fr)", gap: 12, marginBottom: 20 }}>
           <StatCard icon="bi-file-earmark-text-fill" color="var(--dv-accent)" bg="rgba(59,130,246,.12)"
-            value={data?.total ?? 0} label="Total Documents" />
+            value={data?.total ?? 0} label="Documents" />
           <a href="?expiry_filter=expiring" style={{ textDecoration:"none" }}>
             <StatCard icon="bi-calendar-x-fill" color="var(--dv-red)" bg="rgba(239,68,68,.12)"
-              value={data?.expiringCount ?? 0} label="Expiring Soon →" clickable />
+              value={data?.expiringCount ?? 0} label="Expiring" clickable />
           </a>
           <a href="?expiry_filter=expired" style={{ textDecoration:"none" }}>
             <StatCard icon="bi-clock-history" color="var(--dv-muted)" bg="rgba(100,116,139,.12)"
-              value={data?.expiredCount ?? 0} label="Expired →" clickable />
+              value={data?.expiredCount ?? 0} label="Expired" clickable />
           </a>
         </div>
 
@@ -316,14 +316,15 @@ function StatCard({ icon, color, bg, value, label, clickable }: {
   icon: string; color: string; bg: string; value: number; label: string; clickable?: boolean;
 }) {
   return (
-    <div className={`card stat-card${clickable ? " clickable" : ""}`} style={{ cursor: clickable ? "pointer" : "default" }}>
-      <div style={{ display:"flex", alignItems:"center", gap:12, padding:"14px" }}>
-        <div className="stat-icon" style={{ background: bg }}>
+    <div className={`card stat-card${clickable ? " clickable" : ""}`}
+      style={{ cursor: clickable ? "pointer" : "default", minWidth:0 }}>
+      <div style={{ display:"flex", alignItems:"center", gap:10, padding:"12px 14px" }}>
+        <div className="stat-icon" style={{ background: bg, flexShrink:0 }}>
           <i className={`bi ${icon}`} style={{ color }} />
         </div>
-        <div>
-          <div className="stat-value" style={{ color }}>{value}</div>
-          <div className="stat-label">{label}</div>
+        <div style={{ minWidth:0, flex:1 }}>
+          <div className="stat-value" style={{ color, fontSize:"clamp(1.25rem,3vw,1.75rem)" }}>{value}</div>
+          <div className="stat-label" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{label}</div>
         </div>
       </div>
     </div>
@@ -453,6 +454,7 @@ function NewFolderButton({ onCreate }: { onCreate: (name: string) => void }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation(); // prevent bubbling to outer search form
     if (name.trim()) { onCreate(name.trim()); setName(""); setOpen(false); }
   }
 
