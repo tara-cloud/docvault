@@ -89,6 +89,86 @@
       </div>
     </div>
 
+    {# ── Backup ── #}
+    <div class="card mb-4">
+      <div class="card-header d-flex align-items-center gap-2">
+        <i class="bi bi-archive-fill" style="color:var(--dv-accent)"></i>
+        <span class="small fw-semibold" style="color:var(--dv-muted)">Backup</span>
+      </div>
+      <div class="card-body p-4">
+
+        {# Info strip #}
+        <div class="d-flex align-items-start gap-3 p-3 rounded-3 mb-4"
+             style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
+          <i class="bi bi-info-circle" style="color:var(--dv-accent);margin-top:1px;flex-shrink:0"></i>
+          <div class="small" style="color:var(--dv-subtle);line-height:1.7">
+            Backups include the <strong style="color:var(--dv-text)">full database</strong>
+            (documents, categories, folders, settings, encrypted password hash) and all
+            <strong style="color:var(--dv-text)">uploaded files</strong>.
+            Stored at <code>{{ backup_dir }}</code> on the Pi host.
+            Daily auto-backup keeps the last <strong style="color:var(--dv-text)">{{ backup_keep }}</strong> backup{{ 's' if backup_keep != 1 }}.
+          </div>
+        </div>
+
+        {# Create backup #}
+        <form method="POST" action="{{ url_for('settings_backup_create') }}" class="mb-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-primary px-4">
+            <i class="bi bi-archive me-1"></i>Create Backup Now
+          </button>
+        </form>
+
+        {# Backup settings #}
+        <form method="POST" action="{{ url_for('settings_backup_config') }}" class="mb-4">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <label for="backup_keep" class="form-label">Keep last N backups</label>
+          <div class="d-flex gap-2 align-items-center">
+            <input type="number" id="backup_keep" name="backup_keep"
+                   class="form-control" style="width:90px"
+                   value="{{ backup_keep }}" min="1" max="30" required />
+            <button type="submit" class="btn btn-outline-secondary btn-sm px-3">Save</button>
+          </div>
+          <div class="form-text">Older backups are automatically deleted. Max 30.</div>
+        </form>
+
+        {# Backup list #}
+        {% if backups %}
+        <div class="small fw-semibold mb-2" style="color:var(--dv-muted);text-transform:uppercase;letter-spacing:.05em">
+          Saved Backups
+        </div>
+        <div class="d-flex flex-column gap-2">
+          {% for bk in backups %}
+          <div class="d-flex align-items-center gap-3 p-3 rounded-3"
+               style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
+            <i class="bi bi-file-zip-fill" style="color:var(--dv-accent);flex-shrink:0"></i>
+            <div class="flex-grow-1 overflow-hidden">
+              <div class="small fw-semibold text-truncate" style="color:var(--dv-text)">{{ bk.name }}</div>
+              <div class="small" style="color:var(--dv-muted)">{{ bk.size }} &nbsp;·&nbsp; {{ bk.mtime }}</div>
+            </div>
+            <div class="d-flex gap-2 flex-shrink-0">
+              <a href="{{ url_for('settings_backup_download', filename=bk.name) }}"
+                 class="btn btn-sm btn-outline-secondary d-flex align-items-center gap-1">
+                <i class="bi bi-download"></i>
+              </a>
+              <form method="POST" action="{{ url_for('settings_backup_delete', filename=bk.name) }}"
+                    onsubmit="return confirm('Delete backup {{ bk.name }}?')">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                <button type="submit" class="btn btn-sm"
+                        style="border:1px solid rgba(239,68,68,0.3);color:var(--dv-red);background:var(--dv-surface-2)">
+                  <i class="bi bi-trash"></i>
+                </button>
+              </form>
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+        {% else %}
+        <div class="small" style="color:var(--dv-muted)">No backups yet. Click "Create Backup Now" to get started.</div>
+        {% endif %}
+
+      </div>
+    </div>
+
     {# ── About ── #}
     <div class="card">
       <div class="card-header d-flex align-items-center gap-2">

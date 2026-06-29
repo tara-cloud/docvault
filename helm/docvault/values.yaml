@@ -17,8 +17,9 @@ ingress:
   enabled: false
   host: "docvault.local"
 
-# Host path for persistent data (SQLite DB + uploads)
-dataPath: "/DATA/AppData/docvault"
+# Host paths for persistent data (never touched by Helm upgrades)
+dataPath:   "/DATA/AppData/docvault"
+backupPath: "/BACKUP/AppData/docvault"
 
 env:
   appPassword: "changeme"

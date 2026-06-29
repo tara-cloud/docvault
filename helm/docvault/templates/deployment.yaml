@@ -28,13 +28,21 @@ spec:
             - containerPort: 9091
           env:
             - name: APP_PASSWORD
-              value: {{ .Values.env.appPassword | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: docvault-secret
+                  key: app-password
             - name: SECRET_KEY
-              value: {{ .Values.env.secretKey | quote }}
+              valueFrom:
+                secretKeyRef:
+                  name: docvault-secret
+                  key: secret-key
             - name: DB_PATH
               value: "/data/docvault.db"
             - name: UPLOAD_DIR
               value: "/data/uploads"
+            - name: BACKUP_DIR
+              value: "/backup/docvault"
           resources:
             requests:
               cpu: {{ .Values.resources.requests.cpu | quote }}
@@ -57,9 +65,15 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            - name: backup
+              mountPath: /backup
 
       volumes:
         - name: data
           hostPath:
             path: {{ .Values.dataPath }}
+            type: DirectoryOrCreate
+        - name: backup
+          hostPath:
+            path: {{ .Values.backupPath }}
             type: DirectoryOrCreate
