@@ -59,7 +59,6 @@ jobs:
           prerelease: false
 
   # ── 2. Always build & push the image on every push to main ───────────────
-  #    This runs regardless of whether a new release was created.
   docker:
     name: Build & Push Docker Image
     runs-on: ubuntu-latest
@@ -96,7 +95,6 @@ jobs:
           cache-to: type=gha,mode=max
 
   # ── 3. Always deploy to Pi via Helm on every push to main ────────────────
-  #    This runs regardless of whether a new release was created.
   helm-upgrade:
     name: Helm Upgrade on Pi
     runs-on: self-hosted
@@ -112,11 +110,6 @@ jobs:
           sudo chown $(id -u):$(id -g) ~/.kube/config
           chmod 600 ~/.kube/config
 
-      - name: Pre-pull image
-        run: |
-          sudo ctr --namespace k8s.io images pull \
-            docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
-
       - name: Ensure namespace exists and is Helm-adoptable
         run: |
           kubectl create namespace docvault --dry-run=client -o yaml | kubectl apply -f -
@@ -126,10 +119,34 @@ jobs:
             meta.helm.sh/release-namespace=docvault \
             --overwrite
 
-      - name: Restart existing deployment
+      - name: Adopt existing resources into Helm release
         run: |
-          kubectl rollout restart deployment/docvault -n docvault 2>/dev/null || true
-          kubectl wait --for=delete pod -l app=docvault -n docvault --timeout=60s 2>/dev/null || true
+          for kind in deployment service pvc; do
+            for name in $(kubectl get $kind -n docvault -o name 2>/dev/null); do
+              kubectl label $name -n docvault \
+                app.kubernetes.io/managed-by=Helm --overwrite 2>/dev/null || true
+              kubectl annotate $name -n docvault \
+                meta.helm.sh/release-name=docvault \
+                meta.helm.sh/release-namespace=docvault \
+                --overwrite 2>/dev/null || true
+            done
+          done
+
+      - name: Create credentials secret (once — never overwritten)
+        run: |
+          kubectl create secret generic docvault-secret \
+            --namespace docvault \
+            --from-literal=app-password="${{ secrets.DOCVAULT_PASSWORD }}" \
+            --from-literal=secret-key="${{ secrets.DOCVAULT_SECRET_KEY }}" \
+            --dry-run=client -o yaml | \
+          kubectl apply --server-side --field-manager=docvault-init \
+            --force-conflicts=false -f - 2>/dev/null || \
+          echo "Secret already exists — skipping to preserve existing credentials."
+
+      - name: Pre-pull image
+        run: |
+          sudo ctr --namespace k8s.io images pull \
+            docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
 
       - name: Helm upgrade
         run: |
