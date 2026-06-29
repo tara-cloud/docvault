@@ -3,7 +3,6 @@ import { prisma } from "@/lib/db";
 import { normalizeTags, parseTags, computeExpiry, humanSize } from "@/lib/utils";
 import { ALLOWED_MIME, UPLOAD_DIR, docPath } from "@/lib/files";
 import { randomUUID } from "crypto";
-import formidable from "formidable";
 import fs from "fs";
 import path from "path";
 
@@ -96,40 +95,55 @@ export async function GET(req: NextRequest) {
 export async function POST(req: NextRequest) {
   fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-  const form = formidable({ maxFileSize: 50 * 1024 * 1024, keepExtensions: true });
-  const nodeReq = req as unknown as Parameters<typeof form.parse>[0];
-  const [fields, files] = await form.parse(nodeReq);
+  let dest: string | null = null;
+  try {
+    const formData = await req.formData();
+    const fileEntry = formData.get("file");
+    if (!fileEntry || typeof fileEntry === "string") {
+      return NextResponse.json({ error: "No file" }, { status: 400 });
+    }
+    const file = fileEntry as File;
 
-  const file = Array.isArray(files.file) ? files.file[0] : files.file;
-  if (!file) return NextResponse.json({ error: "No file" }, { status: 400 });
+    const ext  = path.extname(file.name).toLowerCase();
+    const mime = ALLOWED_MIME[ext];
+    if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
 
-  const ext  = path.extname(file.originalFilename ?? "").toLowerCase();
-  const mime = ALLOWED_MIME[ext];
-  if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+    if (file.size > 50 * 1024 * 1024) {
+      return NextResponse.json({ error: "File exceeds 50 MB limit" }, { status: 413 });
+    }
 
-  const id   = randomUUID();
-  const dest = docPath(id, ext);
-  fs.renameSync(file.filepath, dest);
+    const id = randomUUID();
+    dest = docPath(id, ext);
+    const buffer = Buffer.from(await file.arrayBuffer());
+    fs.writeFileSync(dest, buffer);
 
-  const f = (k: string) => (Array.isArray(fields[k]) ? fields[k][0] : fields[k]) ?? "";
+    const f = (k: string) => {
+      const v = formData.get(k);
+      return typeof v === "string" ? v : "";
+    };
 
-  const doc = await prisma.document.create({
-    data: {
-      uuid:         id,
-      originalName: file.originalFilename ?? "unknown",
-      displayName:  f("display_name") || path.basename(file.originalFilename ?? "doc", ext),
-      description:  f("description") || null,
-      categoryId:   f("category_id") ? Number(f("category_id")) : 7,
-      folderId:     f("folder_id") ? Number(f("folder_id")) : null,
-      tags:         normalizeTags(f("tags")),
-      fileExt:      ext,
-      fileSize:     fs.statSync(dest).size,
-      mimeType:     mime,
-      expiryDate:   f("expiry_date") || null,
-      uploadedAt:   new Date().toISOString(),
-    },
-    include: { category: true, folder: true },
-  });
+    const doc = await prisma.document.create({
+      data: {
+        uuid:         id,
+        originalName: file.name,
+        displayName:  f("display_name") || path.basename(file.name, ext),
+        description:  f("description") || null,
+        categoryId:   f("category_id") ? Number(f("category_id")) : 7,
+        folderId:     f("folder_id") ? Number(f("folder_id")) : null,
+        tags:         normalizeTags(f("tags")),
+        fileExt:      ext,
+        fileSize:     buffer.length,
+        mimeType:     mime,
+        expiryDate:   f("expiry_date") || null,
+        uploadedAt:   new Date().toISOString(),
+      },
+      include: { category: true, folder: true },
+    });
 
-  return NextResponse.json(enrichDoc(doc), { status: 201 });
+    return NextResponse.json(enrichDoc(doc), { status: 201 });
+  } catch (e: unknown) {
+    if (dest) try { fs.unlinkSync(dest); } catch { /* ignore */ }
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json({ error: msg }, { status: 500 });
+  }
 }

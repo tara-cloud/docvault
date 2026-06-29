@@ -126,13 +126,19 @@ function DashboardInner() {
   }
 
   async function createFolder(name: string) {
+    const parentId = folderId ? Number(folderId) : null;
     const res = await fetch("/api/folders", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, parentId: folderId ? Number(folderId) : null }),
+      body: JSON.stringify({ name, parentId }),
     });
-    if (res.ok) { showToast("success", `Folder "${name}" created.`); load(); }
-    else showToast("danger", "Failed to create folder.");
+    if (res.ok) {
+      showToast("success", `Folder "${name}" created.`);
+      load();
+    } else {
+      const d = await res.json().catch(() => ({})) as { error?: string };
+      showToast("danger", d.error ?? "Failed to create folder.");
+    }
   }
 
   function toggleView(mode: "grid"|"list") {
