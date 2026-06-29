@@ -1,6 +1,6 @@
 /* ─── DocVault 2.0 — Design System ───────────────────────────────────────── */
 
-:root {
+:root, [data-theme="dark"] {
   /* Surfaces */
   --dv-bg:        #0a0c10;
   --dv-surface:   #111318;
@@ -35,6 +35,81 @@
   /* Transition */
   --dv-t: 0.15s ease;
 }
+
+/* ─── Light theme ────────────────────────────────────────────────────────── */
+[data-theme="light"] {
+  --dv-bg:        #f1f5f9;
+  --dv-surface:   #ffffff;
+  --dv-surface-2: #f8fafc;
+  --dv-surface-3: #f1f5f9;
+
+  --dv-border:    #e2e8f0;
+  --dv-border-2:  #cbd5e1;
+
+  --dv-accent:      #2563eb;
+  --dv-accent-dim:  rgba(37,99,235,0.10);
+  --dv-accent-glow: rgba(37,99,235,0.20);
+
+  --dv-green:   #16a34a;
+  --dv-red:     #dc2626;
+  --dv-yellow:  #d97706;
+  --dv-purple:  #9333ea;
+
+  --dv-text:    #0f172a;
+  --dv-muted:   #64748b;
+  --dv-subtle:  #475569;
+}
+
+[data-theme="light"] body {
+  background: var(--dv-bg);
+  color: var(--dv-text);
+}
+
+[data-theme="light"] .dv-navbar {
+  background: rgba(255,255,255,0.92) !important;
+  border-bottom-color: var(--dv-border) !important;
+}
+
+[data-theme="light"] .dv-bottom-nav {
+  background: rgba(255,255,255,0.96);
+  border-top-color: var(--dv-border);
+}
+
+[data-theme="light"] .card {
+  background: var(--dv-surface) !important;
+  border-color: var(--dv-border) !important;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.06);
+}
+
+[data-theme="light"] .card-header {
+  background: var(--dv-surface-2) !important;
+  border-bottom-color: var(--dv-border) !important;
+}
+
+[data-theme="light"] .form-control,
+[data-theme="light"] .form-select {
+  background: var(--dv-surface) !important;
+  border-color: var(--dv-border) !important;
+  color: var(--dv-text) !important;
+}
+
+[data-theme="light"] .search-bar {
+  background: var(--dv-surface);
+  border-color: var(--dv-border);
+}
+
+[data-theme="light"] .input-group-text {
+  background: var(--dv-surface-2) !important;
+  border-color: var(--dv-border) !important;
+  color: var(--dv-muted);
+}
+
+[data-theme="light"] .tag-input-box {
+  background: var(--dv-surface);
+  border-color: var(--dv-border);
+}
+
+[data-theme="light"] ::-webkit-scrollbar-thumb { background: var(--dv-border-2); }
 
 /* ─── Reset & Base ───────────────────────────────────────────────────────── */
 *, *::before, *::after { box-sizing: border-box; }
