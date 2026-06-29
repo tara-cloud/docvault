@@ -454,6 +454,7 @@ function NewFolderButton({ onCreate }: { onCreate: (name: string) => void }) {
 
   function submit(e: React.FormEvent) {
     e.preventDefault();
+    e.stopPropagation(); // prevent bubbling to outer search form
     if (name.trim()) { onCreate(name.trim()); setName(""); setOpen(false); }
   }
 
