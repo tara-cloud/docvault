@@ -3,7 +3,10 @@ import os
 import uuid
 import sqlite3
 import functools
+import tarfile
 import secrets
+import threading
+import time
 from datetime import datetime, date, timedelta
 from flask import (
     Flask, render_template, request, redirect,
@@ -25,6 +28,7 @@ APP_PASSWORD  = os.environ.get("APP_PASSWORD", "changeme")
 SECRET_KEY    = os.environ.get("SECRET_KEY", secrets.token_hex(32))
 DB_PATH       = os.environ.get("DB_PATH", "/data/docvault.db")
 UPLOAD_DIR    = os.environ.get("UPLOAD_DIR", "/data/uploads")
+BACKUP_DIR    = os.environ.get("BACKUP_DIR", "/backup/docvault")
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50 MB
 
 HASHED_PASSWORD = generate_password_hash(APP_PASSWORD)  # may be overridden from DB after init
@@ -977,7 +981,14 @@ def category_delete(cat_id):
 @app.route("/settings", methods=["GET"])
 @login_required
 def settings_get():
-    return render_template("settings.html", theme=_get_setting("theme", "dark"))
+    backup_keep = int(_get_setting("backup_keep", str(BACKUP_KEEP)))
+    return render_template(
+        "settings.html",
+        theme=_get_setting("theme", "dark"),
+        backups=_list_backups(),
+        backup_dir=BACKUP_DIR,
+        backup_keep=backup_keep,
+    )
 
 
 @app.route("/settings/password", methods=["POST"])
@@ -1021,11 +1032,151 @@ def settings_theme():
 
 
 # ---------------------------------------------------------------------------
+# Backup
+# ---------------------------------------------------------------------------
+
+BACKUP_KEEP = 3  # default — overridden at runtime by DB setting
+
+
+def _get_backup_keep():
+    return int(_get_setting("backup_keep", str(BACKUP_KEEP)))
+
+
+def _backup_filename():
+    return f"docvault-backup-{datetime.now().strftime('%Y%m%d-%H%M%S')}.tar.gz"
+
+
+def _list_backups():
+    """Return backup files sorted newest first."""
+    if not os.path.isdir(BACKUP_DIR):
+        return []
+    files = []
+    for name in os.listdir(BACKUP_DIR):
+        if name.startswith("docvault-backup-") and name.endswith(".tar.gz"):
+            path = os.path.join(BACKUP_DIR, name)
+            stat = os.stat(path)
+            files.append({
+                "name":     name,
+                "size":     _human_size(stat.st_size),
+                "size_raw": stat.st_size,
+                "mtime":    datetime.fromtimestamp(stat.st_mtime).strftime("%Y-%m-%d %H:%M"),
+            })
+    return sorted(files, key=lambda f: f["name"], reverse=True)
+
+
+def _create_backup():
+    """Create a .tar.gz of DB + uploads, prune old backups, return filename."""
+    os.makedirs(BACKUP_DIR, exist_ok=True)
+    name    = _backup_filename()
+    outpath = os.path.join(BACKUP_DIR, name)
+
+    with tarfile.open(outpath, "w:gz") as tar:
+        # Database
+        if os.path.isfile(DB_PATH):
+            tar.add(DB_PATH, arcname="docvault.db")
+        # Uploads directory
+        if os.path.isdir(UPLOAD_DIR):
+            tar.add(UPLOAD_DIR, arcname="uploads")
+
+    # Prune: keep only the last N backups (configurable)
+    all_backups = sorted(
+        [f for f in os.listdir(BACKUP_DIR) if f.startswith("docvault-backup-") and f.endswith(".tar.gz")]
+    )
+    for old in all_backups[:-_get_backup_keep()]:
+        try:
+            os.remove(os.path.join(BACKUP_DIR, old))
+        except OSError:
+            pass
+
+    return name
+
+
+@app.route("/settings/backup", methods=["POST"])
+@login_required
+def settings_backup_create():
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    try:
+        name = _create_backup()
+        size = _human_size(os.path.getsize(os.path.join(BACKUP_DIR, name)))
+        flash(f"Backup created: {name} ({size})", "success")
+    except Exception as e:
+        flash(f"Backup failed: {e}", "danger")
+    return redirect(url_for("settings_get"))
+
+
+@app.route("/settings/backup/<path:filename>/download", methods=["GET"])
+@login_required
+def settings_backup_download(filename):
+    # Prevent path traversal
+    if "/" in filename or "\\" in filename or ".." in filename:
+        abort(400)
+    path = os.path.join(BACKUP_DIR, filename)
+    if not os.path.isfile(path):
+        abort(404)
+    return send_file(path, as_attachment=True, download_name=filename)
+
+
+@app.route("/settings/backup/<path:filename>/delete", methods=["POST"])
+@login_required
+def settings_backup_delete(filename):
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    if "/" in filename or "\\" in filename or ".." in filename:
+        abort(400)
+    path = os.path.join(BACKUP_DIR, filename)
+    if os.path.isfile(path):
+        os.remove(path)
+        flash(f"Backup {filename} deleted.", "success")
+    return redirect(url_for("settings_get"))
+
+
+@app.route("/settings/backup/config", methods=["POST"])
+@login_required
+def settings_backup_config():
+    if not _validate_csrf(request.form.get("csrf_token")):
+        abort(400)
+    try:
+        keep = int(request.form.get("backup_keep", "3"))
+        keep = max(1, min(keep, 30))
+        _set_setting("backup_keep", str(keep))
+        flash(f"Backup settings saved — keeping last {keep} backups.", "success")
+    except (ValueError, TypeError):
+        flash("Invalid backup retention value.", "danger")
+    return redirect(url_for("settings_get"))
+
+
+# ---------------------------------------------------------------------------
+# Daily auto-backup scheduler
+# ---------------------------------------------------------------------------
+
+def _daily_backup_loop():
+    """Background thread: create a backup once per day at ~02:00 local time."""
+    while True:
+        now = datetime.now()
+        target = now.replace(hour=2, minute=0, second=0, microsecond=0)
+        if target <= now:
+            target = target.replace(day=target.day + 1)
+        time.sleep((target - now).total_seconds())
+        try:
+            _create_backup()
+        except Exception:
+            pass
+
+
+# Start scheduler once — the WERKZEUG_RUN_MAIN guard prevents a second
+# thread from spawning when the dev-server reloader forks.
+if os.environ.get("WERKZEUG_RUN_MAIN", "true") == "true":
+    threading.Thread(target=_daily_backup_loop, daemon=True, name="daily-backup").start()
+
+
+# ---------------------------------------------------------------------------
 # Entry point
 # ---------------------------------------------------------------------------
 if __name__ == "__main__":
     os.makedirs(UPLOAD_DIR, exist_ok=True)
     os.makedirs(os.path.dirname(DB_PATH) or ".", exist_ok=True)
+    os.makedirs(BACKUP_DIR, exist_ok=True)
     init_db()
     seed_categories()
     seed_settings()
