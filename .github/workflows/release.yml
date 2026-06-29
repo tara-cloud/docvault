@@ -96,25 +96,44 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  deploy:
-    name: Deploy to Pi (CasaOS)
+  helm-upgrade:
+    name: Helm Upgrade on Pi
     runs-on: self-hosted
     needs: [release, docker]
     if: needs.release.outputs.already_exists != 'true'
 
     steps:
-      - name: Pull latest image
-        run: |
-          docker pull ${{ env.IMAGE }}:${{ needs.release.outputs.version }}
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ needs.release.outputs.tag }}
 
-      - name: Restart container
+      - name: Setup kubeconfig
         run: |
-          docker compose -f /var/lib/casaos/apps/docvault/docker-compose.yml \
-            pull
-          docker compose -f /var/lib/casaos/apps/docvault/docker-compose.yml \
-            up -d --force-recreate
+          mkdir -p ~/.kube
+          sudo cp /etc/rancher/k3s/k3s.yaml ~/.kube/config
+          sudo chown $(id -u):$(id -g) ~/.kube/config
+          chmod 600 ~/.kube/config
+
+      - name: Pre-pull image
+        run: |
+          sudo ctr --namespace k8s.io images pull \
+            docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
+
+      - name: Restart existing deployment
+        run: |
+          kubectl rollout restart deployment/docvault -n docvault 2>/dev/null || true
+          kubectl wait --for=delete pod -l app=docvault -n docvault --timeout=60s 2>/dev/null || true
+
+      - name: Helm upgrade
+        run: |
+          helm upgrade --install docvault ./helm/docvault \
+            --namespace docvault \
+            --create-namespace \
+            --set image.tag=${{ needs.release.outputs.version }} \
+            --wait \
+            --timeout 5m
 
       - name: Health check
         run: |
           sleep 5
-          curl -sf http://localhost:9091/health
+          curl -sf http://localhost:30091/health
