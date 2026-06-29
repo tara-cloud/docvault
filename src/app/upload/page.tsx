@@ -87,12 +87,18 @@ function UploadInner() {
         showToast("success", `"${displayName}" uploaded.`);
         router.push("/");
       } else {
-        showToast("danger", "Upload failed. Please try again.");
+        try {
+          const err = JSON.parse(xhr.responseText) as { error?: string };
+          showToast("danger", err.error ?? `Upload failed (${xhr.status}).`);
+        } catch {
+          showToast("danger", `Upload failed (${xhr.status}).`);
+        }
         setStep(2);
       }
     };
-    xhr.onerror = () => { setUploading(false); showToast("danger", "Network error."); setStep(2); };
+    xhr.onerror = () => { setUploading(false); showToast("danger", "Network error — check connection."); setStep(2); };
     xhr.open("POST", "/api/docs");
+    xhr.withCredentials = true;  // ensure cookies sent cross-origin (PWA / home screen)
     xhr.send(fd);
   }
 
