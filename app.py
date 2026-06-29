@@ -14,7 +14,6 @@ from werkzeug.utils import secure_filename
 
 try:
     from pypdf import PdfReader
-    from pypdf.errors import PdfReadError
     _PYPDF_AVAILABLE = True
 except ImportError:
     _PYPDF_AVAILABLE = False
@@ -712,7 +711,7 @@ def doc_preview_file_unlocked(doc_id):
         writer.write(buf)
         buf.seek(0)
         return Response(buf.read(), mimetype="application/pdf")
-    except Exception as e:
+    except Exception:
         return jsonify({"error": "Could not decrypt PDF."}), 400
 
 
