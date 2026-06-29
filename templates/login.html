@@ -2,7 +2,6 @@
 {% block title %}Sign In — DocVault{% endblock %}
 
 {% block full_page %}
-{# Toast container for flash messages #}
 <div class="toast-container position-fixed top-0 end-0 p-3" id="toast-container"></div>
 {% with messages = get_flashed_messages(with_categories=true) %}
   {% if messages %}
@@ -18,38 +17,27 @@
   <div class="login-card">
     <div class="text-center mb-4">
       <div class="login-logo">
-        <i class="bi bi-safe2-fill text-primary"></i>
+        <i class="bi bi-safe2-fill" style="color:var(--dv-accent)"></i>
       </div>
-      <h4 class="fw-bold mb-1">DocVault</h4>
-      <p class="small mb-0" style="color: var(--dv-muted);">Your personal document vault</p>
+      <h5 class="fw-bold mb-1" style="color:var(--dv-text)">DocVault</h5>
+      <p class="small mb-0" style="color:var(--dv-muted)">Your personal document vault</p>
     </div>
 
     <form method="POST" action="{{ url_for('login_post') }}">
       <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
       <div class="mb-4">
-        <label for="password" class="form-label small fw-semibold">Password</label>
+        <label for="password" class="form-label">Password</label>
         <div class="input-group">
-          <span class="input-group-text" style="background:var(--dv-surface-2); border-color:var(--dv-border);">
-            <i class="bi bi-lock" style="color:var(--dv-muted)"></i>
-          </span>
-          <input
-            type="password"
-            id="password"
-            name="password"
-            class="form-control"
-            placeholder="Enter your password"
-            autofocus
-            required
-            style="border-left: none;"
-          />
-          <button type="button" class="input-group-text" id="toggle-pw"
-                  style="background:var(--dv-surface-2); border-color:var(--dv-border); cursor:pointer;">
-            <i class="bi bi-eye" style="color:var(--dv-muted)"></i>
+          <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+          <input type="password" id="password" name="password" class="form-control"
+                 placeholder="Enter your password" autofocus required />
+          <button type="button" id="toggle-pw" class="input-group-text" style="cursor:pointer">
+            <i class="bi bi-eye" id="pw-eye"></i>
           </button>
         </div>
       </div>
       <button type="submit" class="btn btn-primary w-100 py-2">
-        <i class="bi bi-unlock me-1"></i> Sign In
+        <i class="bi bi-unlock me-1"></i>Sign In
       </button>
     </form>
   </div>
@@ -59,15 +47,32 @@
 {% block scripts %}
 <script>
   document.getElementById('toggle-pw').addEventListener('click', function () {
-    const pw = document.getElementById('password');
-    const icon = this.querySelector('i');
-    if (pw.type === 'password') {
-      pw.type = 'text';
-      icon.className = 'bi bi-eye-slash';
-    } else {
-      pw.type = 'password';
-      icon.className = 'bi bi-eye';
-    }
+    const pw  = document.getElementById('password');
+    const eye = document.getElementById('pw-eye');
+    if (pw.type === 'password') { pw.type = 'text'; eye.className = 'bi bi-eye-slash'; }
+    else { pw.type = 'password'; eye.className = 'bi bi-eye'; }
+  });
+
+  // Flash toasts (reuse base pattern)
+  document.addEventListener('DOMContentLoaded', () => {
+    const container = document.getElementById('toast-container');
+    if (!container) return;
+    const icons  = { danger:'x-circle-fill', warning:'exclamation-triangle-fill', info:'info-circle-fill' };
+    const colors = { danger:'var(--dv-red)', warning:'var(--dv-yellow)', info:'var(--dv-accent)' };
+    document.querySelectorAll('#flash-data span').forEach(el => {
+      const cat = el.dataset.cat, msg = el.dataset.msg;
+      const toastEl = document.createElement('div');
+      toastEl.className = `toast ${cat}`;
+      toastEl.setAttribute('role', 'alert');
+      toastEl.innerHTML = `<div class="toast-body d-flex align-items-start gap-2 py-3 px-3">
+        <i class="bi bi-${icons[cat]||'info-circle-fill'} mt-1 flex-shrink-0" style="color:${colors[cat]||'var(--dv-accent)'}"></i>
+        <span class="flex-grow-1 small">${msg}</span>
+        <button type="button" class="btn-close btn-close-white btn-sm ms-1" data-bs-dismiss="toast"></button>
+      </div>`;
+      container.appendChild(toastEl);
+      new bootstrap.Toast(toastEl, { delay: 4500 }).show();
+      toastEl.addEventListener('hidden.bs.toast', () => toastEl.remove());
+    });
   });
 </script>
 {% endblock %}

@@ -9,39 +9,33 @@
       <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="btn btn-outline-secondary btn-sm">
         <i class="bi bi-arrow-left"></i>
       </a>
-      <h5 class="mb-0 fw-semibold text-truncate">Edit &mdash; {{ doc.display_name }}</h5>
+      <h5 class="mb-0 fw-semibold text-truncate">Edit — {{ doc.display_name }}</h5>
     </div>
 
     <div class="card">
-      <div class="card-header py-2 px-3">
-        <span class="small fw-semibold" style="color:var(--dv-muted)">Document Details</span>
-      </div>
+      <div class="card-header"><span class="small fw-semibold" style="color:var(--dv-muted)">Document Details</span></div>
       <div class="card-body p-4">
-        <form method="POST" action="{{ url_for('doc_edit_post', doc_id=doc.id) }}"
-              enctype="multipart/form-data">
+        <form method="POST" action="{{ url_for('doc_edit_post', doc_id=doc.id) }}" enctype="multipart/form-data">
           <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 
           <div class="mb-3">
-            <label for="display_name" class="form-label small fw-semibold">
-              Document Name <span class="text-danger">*</span>
-            </label>
+            <label for="display_name" class="form-label">Document Name <span class="text-danger">*</span></label>
             <input type="text" id="display_name" name="display_name" class="form-control"
                    value="{{ doc.display_name }}" required />
           </div>
 
           <div class="mb-3">
-            <label for="description" class="form-label small fw-semibold">Description</label>
+            <label for="description" class="form-label">Description</label>
             <textarea id="description" name="description" class="form-control" rows="2"
                       placeholder="Optional notes…">{{ doc.description or '' }}</textarea>
           </div>
 
           <div class="mb-3">
-            <label for="folder_id" class="form-label small fw-semibold">Folder</label>
+            <label for="folder_id" class="form-label">Folder</label>
             <select id="folder_id" name="folder_id" class="form-select">
               <option value="">— Root (no folder) —</option>
               {% for f in folder_tree %}
-                <option value="{{ f.id }}"
-                  {% if doc.folder_id == f.id %}selected{% endif %}>
+                <option value="{{ f.id }}" {% if doc.folder_id == f.id %}selected{% endif %}>
                   {{ '　' * f.depth }}{% if f.depth > 0 %}└ {% endif %}{{ f.name }}
                 </option>
               {% endfor %}
@@ -50,19 +44,17 @@
 
           <div class="row g-3 mb-3">
             <div class="col-md-6">
-              <label for="category_id" class="form-label small fw-semibold">Category</label>
+              <label for="category_id" class="form-label">Category</label>
               <select id="category_id" name="category_id" class="form-select">
                 {% for cat in categories %}
-                  <option value="{{ cat.id }}" {% if cat.id == doc.category_id %}selected{% endif %}>
-                    {{ cat.name }}
-                  </option>
+                  <option value="{{ cat.id }}" {% if cat.id == doc.category_id %}selected{% endif %}>{{ cat.name }}</option>
                 {% endfor %}
               </select>
             </div>
             <div class="col-md-6">
-              <label class="form-label small fw-semibold d-flex align-items-center gap-2">
+              <label class="form-label d-flex align-items-center gap-2">
                 Expiry Date
-                <span class="d-flex align-items-center gap-1" style="font-weight:normal;color:var(--dv-muted)">
+                <span class="d-flex align-items-center gap-1 fw-normal" style="color:var(--dv-muted)">
                   <input type="checkbox" id="has-expiry" class="form-check-input m-0"
                          {% if doc.expiry_date %}checked{% endif %} />
                   <span class="small">Has expiry</span>
@@ -71,12 +63,13 @@
               <input type="date" id="expiry_date" name="expiry_date"
                      class="form-control {% if not doc.expiry_date %}d-none{% endif %}"
                      {% if not doc.expiry_date %}disabled{% endif %}
-                     value="{{ doc.expiry_date or '' }}" />
+                     value="{{ doc.expiry_date or '' }}"
+                     aria-label="Expiry date" />
             </div>
           </div>
 
           <div class="mb-4">
-            <label for="tag-text" class="form-label small fw-semibold">Tags</label>
+            <label for="tag-text" class="form-label">Tags</label>
             <div class="tag-input-box" id="tag-box">
               <input type="hidden" name="tags" id="tags-hidden" value="{{ doc.tags_list | join(',') }}" />
               <input type="text" id="tag-text" class="tag-input-real"
@@ -85,52 +78,39 @@
             <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag.</div>
           </div>
 
-          {# ── Current file + Replace section ── #}
+          {# Current file + replace #}
           <div class="mb-4">
             <div class="d-flex align-items-center justify-content-between mb-2">
-              <span class="small fw-semibold">Current File</span>
-              <button type="button" id="toggle-replace-btn"
-                      class="btn btn-outline-secondary btn-sm">
+              <span class="small fw-semibold" style="color:var(--dv-subtle)">Current File</span>
+              <button type="button" id="toggle-replace-btn" class="btn btn-outline-secondary btn-sm">
                 Replace File
               </button>
             </div>
-
             <div class="d-flex align-items-center gap-3 p-3 rounded-3"
                  style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
               <i class="bi bi-file-earmark" style="color:var(--dv-muted);font-size:1.1rem;flex-shrink:0"></i>
               <div class="flex-grow-1 overflow-hidden">
-                <div class="small fw-semibold text-truncate" style="color:var(--dv-text)">
-                  {{ doc.original_name }}
-                </div>
+                <div class="small fw-semibold text-truncate" style="color:var(--dv-text)">{{ doc.original_name }}</div>
                 <div class="small" style="color:var(--dv-muted)">
-                  {{ doc.file_ext[1:] | upper }} &bull; {{ doc.file_size_human }}
-                  &bull; <span class="badge" style="background:var(--dv-surface);border:1px solid var(--dv-border);color:var(--dv-muted);font-size:0.7rem">v{{ doc.version_num }}</span>
-                  {% if versions %}
-                    &bull; {{ versions | length }} previous version{{ 's' if versions | length != 1 }}
-                  {% endif %}
+                  {{ doc.file_ext[1:] | upper }} · {{ doc.file_size_human }}
+                  · <span class="badge-type">v{{ doc.version_num }}</span>
+                  {% if versions %} · {{ versions | length }} previous version{{ 's' if versions | length != 1 }}{% endif %}
                 </div>
               </div>
             </div>
-
-            {# Collapsible replace panel — hidden by default #}
             <div id="replace-panel" class="d-none mt-3 p-3 rounded-3"
                  style="background:var(--dv-surface-2);border:1px solid var(--dv-border)">
               <div class="mb-3">
-                <label for="new_file" class="form-label small fw-semibold">
-                  New File <span class="text-danger">*</span>
-                </label>
+                <label for="new_file" class="form-label">New File <span class="text-danger">*</span></label>
                 <input type="file" id="new_file" name="new_file" class="form-control"
                        accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx" />
-                <div class="form-text">
-                  PDF, PNG, JPG, GIF, WEBP, DOCX &mdash; max 50 MB.
-                  The current file will be kept as a previous version.
-                </div>
+                <div class="form-text">PDF, PNG, JPG, GIF, WEBP, DOCX — max 50 MB. Current file kept as previous version.</div>
               </div>
               <div>
-                <label for="version_note" class="form-label small fw-semibold">Version Note</label>
+                <label for="version_note" class="form-label">Version Note</label>
                 <input type="text" id="version_note" name="version_note" class="form-control"
                        placeholder="e.g. 2025 renewal, corrected scan…" maxlength="200" />
-                <div class="form-text">Optional — describe what changed in this version.</div>
+                <div class="form-text">Optional — describe what changed.</div>
               </div>
             </div>
           </div>
@@ -152,38 +132,30 @@
 {% block scripts %}
 <script>
 (function () {
-  // Replace file toggle
-  const toggleBtn   = document.getElementById('toggle-replace-btn');
+  // Replace toggle
+  const toggleBtn    = document.getElementById('toggle-replace-btn');
   const replacePanel = document.getElementById('replace-panel');
-  const fileInput   = document.getElementById('new_file');
+  const fileInput    = document.getElementById('new_file');
   toggleBtn.addEventListener('click', function () {
-    const open = replacePanel.classList.toggle('d-none');
-    this.textContent = open ? 'Replace File' : 'Cancel';
-    if (open) fileInput.value = '';
+    const hidden = replacePanel.classList.toggle('d-none');
+    this.textContent = hidden ? 'Replace File' : 'Cancel';
+    if (hidden) fileInput.value = '';
   });
 
-  // Tag chip widget
-  const box    = document.getElementById('tag-box');
-  const input  = document.getElementById('tag-text');
-  const hidden = document.getElementById('tags-hidden');
-  const tags   = hidden.value ? hidden.value.split(',').map(t => t.trim()).filter(Boolean) : [];
-
+  // Tags
+  const box = document.getElementById('tag-box'), input = document.getElementById('tag-text'), hidden = document.getElementById('tags-hidden');
+  const tags = hidden.value ? hidden.value.split(',').map(t => t.trim()).filter(Boolean) : [];
   function renderChips() {
     box.querySelectorAll('.tag-chip').forEach(el => el.remove());
     tags.forEach((tag, i) => {
-      const chip = document.createElement('span');
-      chip.className = 'tag-chip';
+      const chip = document.createElement('span'); chip.className = 'tag-chip';
       chip.innerHTML = `${tag}<button type="button" aria-label="Remove ${tag}">&times;</button>`;
       chip.querySelector('button').addEventListener('click', () => { tags.splice(i,1); renderChips(); syncHidden(); });
       input.before(chip);
     });
   }
   function syncHidden() { hidden.value = tags.join(','); }
-  function addTag(raw) {
-    const val = raw.trim().toLowerCase();
-    if (val && !tags.includes(val)) { tags.push(val); renderChips(); syncHidden(); }
-    input.value = '';
-  }
+  function addTag(raw) { const v = raw.trim().toLowerCase(); if (v && !tags.includes(v)) { tags.push(v); renderChips(); syncHidden(); } input.value = ''; }
   input.addEventListener('keydown', function(e) {
     if (e.key === 'Enter' || e.key === ',') { e.preventDefault(); addTag(this.value); }
     else if (e.key === 'Backspace' && !this.value && tags.length) { tags.pop(); renderChips(); syncHidden(); }
@@ -191,10 +163,9 @@
   input.addEventListener('blur', function() { if (this.value.trim()) addTag(this.value); });
   renderChips();
 
-  // Expiry date checkbox
-  const hasExpiry  = document.getElementById('has-expiry');
-  const expiryDate = document.getElementById('expiry_date');
-  hasExpiry.addEventListener('change', function () {
+  // Expiry
+  const hasExpiry = document.getElementById('has-expiry'), expiryDate = document.getElementById('expiry_date');
+  hasExpiry.addEventListener('change', function() {
     expiryDate.classList.toggle('d-none', !this.checked);
     expiryDate.disabled = !this.checked;
     if (!this.checked) expiryDate.value = '';
