@@ -49,10 +49,12 @@ function DashboardInner() {
   const [expFilter, setExpFilter]= useState(sp.get("expiry_filter") ?? "");
   const [folderId, setFolderId] = useState<string>(sp.get("folder_id") ?? "");
   const [breadcrumb, setBreadcrumb] = useState<{ id: number; name: string }[]>([]);
-  const [dragDocId, setDragDocId]     = useState<number | null>(null);
-  const [dragDocName, setDragDocName] = useState("");
-  const [allFolders, setAllFolders]   = useState<{ id: number; name: string; parentId: number | null }[]>([]);
-  const [qpDoc, setQpDoc]             = useState<Doc | null>(null);
+  const [dragDocId, setDragDocId]       = useState<number | null>(null);
+  const [dragDocName, setDragDocName]   = useState("");
+  const [dragFolderId, setDragFolderId]   = useState<number | null>(null);
+  const [dragFolderName, setDragFolderName] = useState("");
+  const [allFolders, setAllFolders]     = useState<{ id: number; name: string; parentId: number | null }[]>([]);
+  const [qpDoc, setQpDoc]               = useState<Doc | null>(null);
   const searchRef = useRef<HTMLInputElement>(null);
 
   const searching = !!(q || catId || expFilter);
@@ -122,6 +124,21 @@ function DashboardInner() {
       load();
     }
     else showToast("danger", "Move failed.");
+  }
+
+  async function moveFolder(folderId: number, folderName: string, toParentId: number | null, parentName: string) {
+    const res = await fetch(`/api/folders/${folderId}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parentId: toParentId }),
+    });
+    if (res.ok) {
+      showToast("success", `"${folderName}" moved to ${parentName}.`);
+      load();
+    } else {
+      const d = await res.json().catch(() => ({})) as { error?: string };
+      showToast("danger", d.error ?? "Move failed.");
+    }
   }
 
   async function deleteDoc(docId: number, name: string) {
@@ -268,18 +285,19 @@ function DashboardInner() {
         {!searching && data?.subfolders?.length ? (
           <div className="folder-grid" style={{ display:"grid", gridTemplateColumns:"repeat(auto-fill,minmax(130px,1fr))", gap:8, marginBottom:20 }}>
             {data.subfolders.map(sf => (
-              <div key={sf.id}
-                onDragOver={e => { e.preventDefault(); }}
-                onDrop={e => { e.preventDefault(); if (dragDocId) moveDoc(dragDocId, dragDocName, sf.id); }}
-              >
-                <button type="button" className="folder-card"
-                  style={{ width:"100%", padding:"16px 12px" }}
-                  onClick={() => setFolderId(String(sf.id))}>
-                  <div className="folder-icon"><i className="bi bi-folder-fill" /></div>
-                  <div style={{ fontSize:12, fontWeight:600, color:"var(--dv-text)", marginTop:8, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sf.name}</div>
-                  <div style={{ fontSize:11, color:"var(--dv-muted)", marginTop:2 }}>{sf.docCount} doc{sf.docCount !== 1 ? "s" : ""}</div>
-                </button>
-              </div>
+              <FolderCard
+                key={sf.id}
+                sf={sf}
+                allFolders={allFolders}
+                dragFolderId={dragFolderId}
+                dragDocId={dragDocId}
+                onDragStart={(id, name) => { setDragFolderId(id); setDragFolderName(name); }}
+                onDragEnd={() => { setDragFolderId(null); setDragFolderName(""); }}
+                onDropDoc={(sfId, sfName) => moveDoc(dragDocId!, dragDocName, sfId, sfName)}
+                onDropFolder={(sfId, sfName) => dragFolderId !== null && dragFolderId !== sfId && moveFolder(dragFolderId, dragFolderName, sfId, sfName)}
+                onNavigate={() => setFolderId(String(sf.id))}
+                onMoveFolder={(parentId, parentName) => moveFolder(sf.id, sf.name, parentId, parentName)}
+              />
             ))}
           </div>
         ) : null}
@@ -330,6 +348,66 @@ function StatCard({ icon, color, bg, value, label, clickable }: {
           <div className="stat-label" style={{ overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{label}</div>
         </div>
       </div>
+    </div>
+  );
+}
+
+function FolderCard({ sf, allFolders, dragFolderId, dragDocId, onDragStart, onDragEnd, onDropDoc, onDropFolder, onNavigate, onMoveFolder }: {
+  sf: Folder;
+  allFolders: { id: number; name: string; parentId: number | null }[];
+  dragFolderId: number | null;
+  dragDocId: number | null;
+  onDragStart: (id: number, name: string) => void;
+  onDragEnd: () => void;
+  onDropDoc: (sfId: number, sfName: string) => void;
+  onDropFolder: (sfId: number, sfName: string) => void;
+  onNavigate: () => void;
+  onMoveFolder: (parentId: number | null, parentName: string) => void;
+}) {
+  const [isDragOver, setIsDragOver] = useState(false);
+  const [moveOpen, setMoveOpen]     = useState(false);
+  const currentParentId = allFolders.find(f => f.id === sf.id)?.parentId ?? null;
+
+  return (
+    <div
+      draggable
+      onDragStart={e => { onDragStart(sf.id, sf.name); e.dataTransfer.effectAllowed = "move"; e.dataTransfer.setData("dv-folder", String(sf.id)); }}
+      onDragEnd={onDragEnd}
+      onDragOver={e => { e.preventDefault(); if (dragFolderId !== sf.id) { e.dataTransfer.dropEffect = "move"; setIsDragOver(true); } }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={e => {
+        e.preventDefault(); setIsDragOver(false);
+        if (dragDocId !== null) onDropDoc(sf.id, sf.name);
+        else if (dragFolderId !== null && dragFolderId !== sf.id) onDropFolder(sf.id, sf.name);
+      }}
+      style={{ position:"relative" }}
+    >
+      <button type="button" className="folder-card"
+        style={{ width:"100%", padding:"16px 12px", outline: isDragOver ? `2px solid var(--dv-yellow)` : undefined }}
+        onClick={onNavigate}>
+        <div className="folder-icon"><i className="bi bi-folder-fill" /></div>
+        <div style={{ fontSize:12, fontWeight:600, color:"var(--dv-text)", marginTop:8, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sf.name}</div>
+        <div style={{ fontSize:11, color:"var(--dv-muted)", marginTop:2 }}>{sf.docCount} doc{sf.docCount !== 1 ? "s" : ""}</div>
+      </button>
+
+      {/* Mobile move button */}
+      <button type="button"
+        onClick={e => { e.stopPropagation(); setMoveOpen(true); }}
+        style={{ position:"absolute", top:6, right:6, background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", borderRadius:6, padding:"2px 6px", cursor:"pointer", fontSize:11, color:"var(--dv-muted)", lineHeight:1 }}
+        title="Move folder">
+        <i className="bi bi-arrows-move" />
+      </button>
+
+      {moveOpen && (
+        <MoveFolderToSheet
+          folderName={sf.name}
+          currentParentId={currentParentId}
+          folders={allFolders}
+          thisId={sf.id}
+          onMove={(parentId, parentName) => { onMoveFolder(parentId, parentName); setMoveOpen(false); }}
+          onClose={() => setMoveOpen(false)}
+        />
+      )}
     </div>
   );
 }
@@ -506,6 +584,64 @@ function MoveFolderSheet({ docName, currentFolderId, folders, onMove, onClose }:
               {item.id === currentFolderId && (
                 <i className="bi bi-check2" style={{ marginLeft:"auto", color:"var(--dv-accent)" }} />
               )}
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Bottom sheet for moving a FOLDER to another folder (mobile)
+function MoveFolderToSheet({ folderName, currentParentId, folders, thisId, onMove, onClose }: {
+  folderName: string;
+  currentParentId: number | null;
+  folders: { id: number; name: string; parentId: number | null }[];
+  thisId: number;
+  onMove: (parentId: number | null, parentName: string) => void;
+  onClose: () => void;
+}) {
+  function buildTree(parentId: number | null, depth: number): { id: number | null; name: string; depth: number }[] {
+    const result: { id: number | null; name: string; depth: number }[] = [];
+    if (parentId === null) result.push({ id: null, name: "Root (top level)", depth: 0 });
+    folders
+      .filter(f => f.parentId === parentId && f.id !== thisId) // exclude self
+      .forEach(f => {
+        result.push({ id: f.id, name: f.name, depth });
+        result.push(...buildTree(f.id, depth + 1));
+      });
+    return result;
+  }
+  const tree = buildTree(null, 0);
+
+  return (
+    <div style={{ position:"fixed", inset:0, zIndex:2000, background:"rgba(0,0,0,.6)", backdropFilter:"blur(6px)" }}
+      onClick={onClose}>
+      <div style={{ position:"absolute", bottom:0, left:0, right:0, background:"var(--dv-surface)", borderRadius:"20px 20px 0 0", maxHeight:"70vh", display:"flex", flexDirection:"column", paddingBottom:"env(safe-area-inset-bottom)" }}
+        onClick={e => e.stopPropagation()}>
+        <div style={{ display:"flex", justifyContent:"center", padding:"12px 0 8px" }}>
+          <div style={{ width:36, height:4, borderRadius:2, background:"var(--dv-border-2)" }} />
+        </div>
+        <div style={{ padding:"0 16px 12px", borderBottom:"1px solid var(--dv-border)" }}>
+          <div style={{ fontWeight:700, fontSize:15 }}>Move Folder To</div>
+          <div style={{ fontSize:12, color:"var(--dv-muted)", marginTop:2 }}>{folderName}</div>
+        </div>
+        <div style={{ overflowY:"auto", padding:"8px 0" }}>
+          {tree.map(item => (
+            <button key={item.id ?? "root"} type="button"
+              onClick={() => onMove(item.id, item.name)}
+              style={{
+                width:"100%", background: item.id === currentParentId ? "var(--dv-accent-dim)" : "none",
+                border:"none", cursor:"pointer", display:"flex", alignItems:"center", gap:10,
+                padding:"12px 16px", textAlign:"left",
+                paddingLeft: 16 + item.depth * 16,
+                color: item.id === currentParentId ? "var(--dv-accent)" : "var(--dv-text)",
+                fontSize:14,
+              }}>
+              <i className={`bi bi-${item.id === null ? "house-door" : "folder"}`}
+                style={{ color: item.id === null ? "var(--dv-muted)" : "var(--dv-yellow)", flexShrink:0 }} />
+              {item.name}
+              {item.id === currentParentId && <i className="bi bi-check2" style={{ marginLeft:"auto", color:"var(--dv-accent)" }} />}
             </button>
           ))}
         </div>
