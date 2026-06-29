@@ -6,6 +6,24 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [1.5.0] - 2026-06-29
+
+### Changed
+
+- Full UI redesign: new dark design system (deeper bg `#0a0c10`, blue accent `#3b82f6`, tighter radii)
+- Dashboard: clickable stat cards, grid/list view toggle, quick-preview modal, `/` keyboard shortcut
+- Upload: 3-step progress indicator, live XHR progress bar
+- All templates refreshed: login, preview, edit, categories, settings
+- SRI integrity attributes on all CDN links
+
+### Fixed
+
+- Release workflow redesigned: docker build and helm-upgrade now run on every push to `main`
+  regardless of whether a new GitHub Release was created — previously they were gated on the
+  release job output and silently skipped when the version tag already existed
+
+---
+
 ## [1.4.0] - 2026-06-29
 
 ### Added
