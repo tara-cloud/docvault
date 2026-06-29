@@ -48,12 +48,26 @@ main { animation: dv-fadein 0.22s ease; }
   padding: 0.35rem 0.75rem !important;
   color: var(--dv-muted) !important;
   transition: color var(--dv-transition), background var(--dv-transition);
+  position: relative;
 }
 .nav-link:hover, .nav-link.active {
   color: var(--dv-text) !important;
   background: var(--dv-surface-2);
 }
-.nav-link.active { color: #fff !important; }
+.nav-link.active {
+  color: #fff !important;
+}
+.nav-link.active::after {
+  content: '';
+  position: absolute;
+  bottom: -2px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 18px;
+  height: 2px;
+  background: var(--dv-accent);
+  border-radius: 2px;
+}
 
 /* ─── Cards ──────────────────────────────────────────────────────────────── */
 .card {
@@ -102,16 +116,116 @@ main { animation: dv-fadein 0.22s ease; }
 .doc-card[data-type="docx"]::before  { background: #58a6ff; }
 .doc-card[data-type="other"]::before { background: #d29922; }
 
+/* Quick-preview hover overlay */
+.doc-card .quick-preview-btn {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%) scale(0.85);
+  opacity: 0;
+  transition: opacity var(--dv-transition), transform var(--dv-transition);
+  pointer-events: none;
+  z-index: 2;
+}
+.doc-card:hover .quick-preview-btn {
+  opacity: 1;
+  transform: translate(-50%, -50%) scale(1);
+  pointer-events: auto;
+}
+
+/* ─── View toggle ────────────────────────────────────────────────────────── */
+.view-toggle {
+  display: inline-flex;
+  background: var(--dv-surface-2);
+  border: 1px solid var(--dv-border);
+  border-radius: 8px;
+  padding: 3px;
+  gap: 2px;
+}
+.view-toggle-btn {
+  background: none;
+  border: none;
+  color: var(--dv-muted);
+  border-radius: 6px;
+  padding: 4px 8px;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: background var(--dv-transition), color var(--dv-transition);
+  line-height: 1;
+}
+.view-toggle-btn.active {
+  background: var(--dv-surface);
+  color: var(--dv-text);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+}
+.view-toggle-btn:hover:not(.active) {
+  background: rgba(255,255,255,0.05);
+  color: var(--dv-text);
+}
+
+/* List view layout */
+#doc-grid.list-view {
+  display: flex !important;
+  flex-direction: column;
+  gap: 8px;
+}
+#doc-grid.list-view .col {
+  width: 100% !important;
+  max-width: 100%;
+  flex: none;
+}
+#doc-grid.list-view .doc-card {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  min-height: 60px;
+}
+#doc-grid.list-view .doc-card .card-header {
+  width: 220px;
+  flex-shrink: 0;
+  border-bottom: none;
+  border-right: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius-lg) 0 0 var(--dv-radius-lg) !important;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+}
+#doc-grid.list-view .doc-card .card-body {
+  flex: 1;
+  padding: 0.5rem 0.75rem;
+}
+#doc-grid.list-view .doc-card .card-body p,
+#doc-grid.list-view .doc-card .card-body .d-flex.flex-wrap {
+  display: none !important;
+}
+#doc-grid.list-view .doc-card .card-footer {
+  width: 140px;
+  flex-shrink: 0;
+  border-top: none;
+  border-left: 1px solid var(--dv-border);
+  border-radius: 0 var(--dv-radius-lg) var(--dv-radius-lg) 0 !important;
+  padding: 0.5rem 0.75rem;
+  display: flex;
+  align-items: center;
+}
+#doc-grid.list-view .doc-card:hover {
+  transform: none;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
 /* ─── Stat Cards ─────────────────────────────────────────────────────────── */
 .stat-card {
   background: var(--dv-surface);
   border: 1px solid var(--dv-border) !important;
   border-radius: var(--dv-radius-lg) !important;
-  transition: border-color var(--dv-transition), box-shadow var(--dv-transition);
+  transition: border-color var(--dv-transition), box-shadow var(--dv-transition), transform var(--dv-transition);
+  cursor: default;
 }
 .stat-card:hover {
   box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  transform: translateY(-2px);
 }
+.stat-card.clickable { cursor: pointer; }
 .stat-card .stat-icon {
   width: 44px; height: 44px;
   border-radius: 10px;
@@ -228,6 +342,27 @@ main { animation: dv-fadein 0.22s ease; }
 }
 .file-chosen .upload-icon { color: #3fb950 !important; transform: none !important; }
 
+/* ─── Upload progress ────────────────────────────────────────────────────── */
+.upload-progress-wrap {
+  display: none;
+  background: var(--dv-surface-2);
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  padding: 0.75rem 1rem;
+}
+.upload-progress-wrap.visible { display: block; }
+.upload-progress-wrap .progress {
+  height: 6px;
+  background: var(--dv-border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+.upload-progress-wrap .progress-bar {
+  background: var(--dv-accent);
+  border-radius: 3px;
+  transition: width 0.2s ease;
+}
+
 /* ─── Tag chip input ─────────────────────────────────────────────────────── */
 .tag-input-box {
   display: flex;
@@ -285,6 +420,32 @@ main { animation: dv-fadein 0.22s ease; }
   50%       { opacity: 0.5; }
 }
 .expiry-pulse { animation: expiry-pulse 1.6s ease-in-out infinite; }
+
+/* ─── Quick Preview Modal ────────────────────────────────────────────────── */
+.modal-content {
+  background: var(--dv-surface) !important;
+  border: 1px solid var(--dv-border) !important;
+  border-radius: var(--dv-radius-lg) !important;
+}
+.modal-header {
+  border-bottom: 1px solid var(--dv-border) !important;
+}
+.modal-footer {
+  border-top: 1px solid var(--dv-border) !important;
+}
+#quickPreviewModal .modal-body {
+  background: var(--dv-surface-2);
+  padding: 0;
+  min-height: 200px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+#quickPreviewModal embed,
+#quickPreviewModal img {
+  border-radius: 0;
+  display: block;
+}
 
 /* ─── Preview page ───────────────────────────────────────────────────────── */
 .preview-area {
@@ -437,3 +598,25 @@ hr { border-color: var(--dv-border); opacity: 1; }
 }
 .dv-breadcrumb a { color: var(--dv-accent); }
 .dv-breadcrumb .breadcrumb-item.active { color: var(--dv-text); }
+
+/* ─── Keyboard shortcut hint ─────────────────────────────────────────────── */
+.shortcut-hint {
+  position: fixed;
+  bottom: 1.25rem;
+  right: 1.25rem;
+  background: var(--dv-surface);
+  border: 1px solid var(--dv-border);
+  border-radius: var(--dv-radius);
+  padding: 0.4rem 0.75rem;
+  font-size: 0.72rem;
+  color: var(--dv-muted);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(6px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  z-index: 999;
+}
+.shortcut-hint.show {
+  opacity: 1;
+  transform: translateY(0);
+}
