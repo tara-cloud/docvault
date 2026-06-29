@@ -6,6 +6,32 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [1.4.0] - 2026-06-29
+
+### Added
+
+- **Helm chart** (`helm/docvault/`) for k3s deployment — namespace, deployment, NodePort service (30091), PVC, liveness/readiness probes
+- GitHub Actions `ci.yml` — Python syntax check + flake8 lint on every PR and non-main push
+- GitHub Actions `release.yml` — auto GitHub Release from `VERSION` + `CHANGELOG`, multi-arch Docker build (`amd64` + `arm64`), Helm upgrade on Pi via self-hosted runner
+
+### Changed
+
+- Deployment migrated from CasaOS docker-compose to k3s via Helm; app now accessible at `http://<pi>:30091`
+- Dashboard stat cards (Expiring Soon, Expired) are clickable filter links
+- Grid/list view toggle on dashboard with `localStorage` persistence
+- Quick-preview modal for PDFs and images (inline, no page navigation)
+- Keyboard shortcut `/` to focus search with floating hint
+- Upload page 3-step progress indicator and live XHR progress bar
+- Navbar active-link underline indicator
+- Accessibility: proper labels, `aria-live` spinners, `<output>` for status
+
+### Fixed
+
+- Removed unused `PdfReadError` import from `app.py`
+- Fixed unused `except Exception as e` variable in PDF decrypt route
+
+---
+
 ## [1.3.0] - 2026-06-13
 
 ### Added
