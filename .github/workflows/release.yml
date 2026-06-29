@@ -119,6 +119,9 @@ jobs:
           sudo ctr --namespace k8s.io images pull \
             docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
 
+      - name: Ensure namespace exists
+        run: kubectl create namespace docvault --dry-run=client -o yaml | kubectl apply -f -
+
       - name: Restart existing deployment
         run: |
           kubectl rollout restart deployment/docvault -n docvault 2>/dev/null || true
