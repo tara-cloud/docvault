@@ -298,15 +298,6 @@ function DashboardInner() {
       <style>{`
         .doc-grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(280px,1fr)); gap:12px; }
         .doc-list  { display:flex; flex-direction:column; gap:6px; }
-        .dv-btn-primary { background:var(--dv-accent); border:none; color:#fff; padding:6px 14px; border-radius:var(--dv-r); font-weight:600; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; }
-        .dv-btn-outline { background:var(--dv-surface-2); border:1px solid var(--dv-border-2); color:var(--dv-subtle); padding:6px 10px; border-radius:var(--dv-r); cursor:pointer; }
-        .dv-btn-success { background:var(--dv-green); border:none; color:#fff; padding:6px 14px; border-radius:var(--dv-r); font-weight:600; font-size:13px; cursor:pointer; display:flex; align-items:center; gap:6px; text-decoration:none; }
-        .dv-link { background:none; border:none; color:var(--dv-accent); cursor:pointer; padding:0; font-size:inherit; }
-        .visually-hidden { position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0,0,0,0); }
-        .w-100 { width:100%; }
-        .mb-3 { margin-bottom:12px; }
-        .breadcrumb { display:flex; list-style:none; padding:0; margin:0; gap:6px; align-items:center; }
-        .breadcrumb-item + .breadcrumb-item::before { content:"›"; color:var(--dv-muted); }
       `}</style>
     </div>
   );
@@ -343,7 +334,7 @@ function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview }: {
   return (
     <div className="card doc-card" data-type={dtype} draggable
       onDragStart={() => onDragStart(doc.id, doc.displayName)}
-      style={{ position:"relative", overflow:"hidden" }}
+      style={{ position:"relative" }}
     >
       <div className="card-header" style={{ display:"flex", alignItems:"center", gap:8, padding:"8px 12px" }}>
         <i className="bi bi-grip-vertical drag-handle" />
