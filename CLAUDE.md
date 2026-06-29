@@ -23,24 +23,33 @@ docker buildx build --platform linux/amd64,linux/arm64 \
 # Deploy to Pi (see /deploy skill)
 ```
 
-## Pi Deployment
+## Pi Deployment (k3s)
 
-- **Host:** `pi-hole@192.168.0.107`
-- **App dir:** `/var/lib/casaos/apps/docvault/docker-compose.yml`
-- **Data dir:** `/DATA/AppData/docvault/`
-- **Port:** `9091`
+- **Host:** `pi@192.168.0.107`
+- **Namespace:** `docvault`
+- **Data dir:** `/DATA/AppData/docvault/` (host-path mount)
+- **NodePort:** `30091` → `http://192.168.0.107:30091`
 - **Docker Hub image:** `pmananthu/docvault:latest`
+- **Helm chart:** `./helm/docvault/`
 
 ```bash
-# Pull and restart on Pi
-ssh pi-hole@192.168.0.107
-echo '<password>' | sudo -S docker compose -f /var/lib/casaos/apps/docvault/docker-compose.yml pull
-echo '<password>' | sudo -S docker compose -f /var/lib/casaos/apps/docvault/docker-compose.yml up -d
+# First deploy
+helm upgrade --install docvault ./helm/docvault \
+  --namespace docvault --create-namespace \
+  --set env.appPassword=<password> \
+  --set env.secretKey=<long-random-string>
+
+# Check status
+kubectl get pods -n docvault
+kubectl logs -n docvault deployment/docvault
+
+# Manual redeploy after image push
+kubectl rollout restart deployment/docvault -n docvault
 ```
 
 ## Project Structure
 
-```
+```text
 app.py                  # All Flask routes, DB helpers, auth — single file
 requirements.txt        # Flask==3.0.3, Werkzeug==3.0.3
 Dockerfile              # python:3.11-slim, port 9091, healthcheck
@@ -75,7 +84,7 @@ VERSION                 # Current version (single line)
 ## Environment Variables
 
 | Var | Default | Notes |
-|-----|---------|-------|
+| --- | ------- | ----- |
 | `APP_PASSWORD` | `changeme` | Login password |
 | `SECRET_KEY` | random | Set a fixed value so sessions survive restarts |
 | `DB_PATH` | `/data/docvault.db` | SQLite path inside container |
