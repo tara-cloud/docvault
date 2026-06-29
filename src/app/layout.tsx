@@ -1,5 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import ServiceWorker from "@/components/ServiceWorker";
+import ThemeProvider from "@/components/ThemeProvider";
 import "./globals.css";
 
 export const metadata: Metadata = {
@@ -20,7 +21,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
+    <html lang="en" data-theme="dark">
       <head>
         <link
           rel="stylesheet"
@@ -30,8 +31,10 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         />
       </head>
       <body>
-        {children}
-        <ServiceWorker />
+        <ThemeProvider>
+          {children}
+          <ServiceWorker />
+        </ThemeProvider>
       </body>
     </html>
   );

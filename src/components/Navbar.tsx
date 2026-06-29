@@ -1,22 +1,16 @@
 "use client";
 
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 
 export default function Navbar() {
   const pathname = usePathname();
-  const router   = useRouter();
-
-  async function handleLogout() {
-    await fetch("/api/auth/logout", { method: "POST" });
-    router.push("/login");
-  }
 
   const navLinks = [
-    { href: "/",           icon: "bi-grid-1x2-fill",        label: "Documents" },
-    { href: "/upload",     icon: "bi-cloud-arrow-up-fill",  label: "Upload" },
-    { href: "/categories", icon: "bi-tag-fill",             label: "Categories" },
-    { href: "/settings",   icon: "bi-gear-fill",            label: "Settings" },
+    { href: "/",           icon: "bi-grid-1x2-fill",       label: "Documents" },
+    { href: "/upload",     icon: "bi-cloud-arrow-up-fill", label: "Upload" },
+    { href: "/categories", icon: "bi-tag-fill",            label: "Categories" },
+    { href: "/settings",   icon: "bi-gear-fill",           label: "Settings" },
   ];
 
   return (
@@ -40,10 +34,6 @@ export default function Navbar() {
               );
             })}
           </div>
-          <button type="button" className="dv-signout" onClick={handleLogout}>
-            <i className="bi bi-box-arrow-right" />
-            <span>Sign Out</span>
-          </button>
         </div>
       </nav>
 
@@ -58,10 +48,6 @@ export default function Navbar() {
             </Link>
           );
         })}
-        <button type="button" className="dv-bottom-nav-item" onClick={handleLogout}>
-          <i className="bi bi-box-arrow-right" />
-          <span>Sign Out</span>
-        </button>
       </nav>
     </>
   );
