@@ -117,8 +117,14 @@ jobs:
           sudo ctr --namespace k8s.io images pull \
             docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
 
-      - name: Ensure namespace exists
-        run: kubectl create namespace docvault --dry-run=client -o yaml | kubectl apply -f -
+      - name: Ensure namespace exists and is Helm-adoptable
+        run: |
+          kubectl create namespace docvault --dry-run=client -o yaml | kubectl apply -f -
+          kubectl label namespace docvault app.kubernetes.io/managed-by=Helm --overwrite
+          kubectl annotate namespace docvault \
+            meta.helm.sh/release-name=docvault \
+            meta.helm.sh/release-namespace=docvault \
+            --overwrite
 
       - name: Restart existing deployment
         run: |
