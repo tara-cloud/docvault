@@ -20,9 +20,11 @@ ingress:
 # Host path for persistent data (SQLite DB + uploads)
 dataPath: "/DATA/AppData/docvault"
 
-env:
-  appPassword: "changeme"
-  secretKey: "change-this-to-a-long-random-string"
+# Credentials are stored in a Kubernetes Secret named 'docvault-secret'.
+# The secret is created by the CI workflow on first deploy using
+# DOCVAULT_PASSWORD and DOCVAULT_SECRET_KEY GitHub repository secrets.
+# It is never overwritten on subsequent deploys, preserving any DB-stored
+# password changes made through the app's Settings page.
 
 resources:
   requests:
