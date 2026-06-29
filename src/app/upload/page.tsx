@@ -110,21 +110,21 @@ function UploadInner() {
     <div>
       <Navbar />
       <ToastContainer />
-      <main style={{ padding:"24px 20px 48px", maxWidth:720, margin:"0 auto" }}>
-        <div style={{ display:"flex", alignItems:"center", gap:12, marginBottom:24 }}>
-          <button type="button" className="dv-btn-outline" style={{ padding:"6px 10px" }} onClick={() => router.back()}>
+      <main style={{ padding:"16px 16px 80px", maxWidth:720, margin:"0 auto" }}>
+        <div style={{ display:"flex", alignItems:"center", gap:10, marginBottom:20 }}>
+          <button type="button" className="dv-btn-outline" style={{ padding:"8px 10px", flexShrink:0 }} onClick={() => router.back()}>
             <i className="bi bi-arrow-left" />
           </button>
-          <h5 style={{ margin:0, fontWeight:700 }}>Upload Document</h5>
+          <h5 style={{ margin:0, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>Upload Document</h5>
         </div>
 
         {/* Step indicator */}
-        <div className="upload-steps" style={{ marginBottom:24 }}>
-          {(["Choose File","Details","Upload"] as const).map((label, i) => (
+        <div className="upload-steps" style={{ marginBottom:20 }}>
+          {([["1","File"],["2","Details"],["3","Upload"]] as const).map(([num, label], i) => (
             <span key={label} style={{ display:"contents" }}>
               <div className={`step-item${step > i ? " active" : ""}${step > i+1 ? " done" : ""}`}>
-                <div className="step-dot">{step > i+1 ? "✓" : i+1}</div>
-                <span style={{ fontSize:12, fontWeight:600 }}>{label}</span>
+                <div className="step-dot">{step > i+1 ? "✓" : num}</div>
+                <span style={{ fontSize:11, fontWeight:600 }} className="step-label">{label}</span>
               </div>
               {i < 2 && <div className={`step-line${step > i+1 ? " done" : ""}`} />}
             </span>
@@ -132,7 +132,7 @@ function UploadInner() {
         </div>
 
         <div className="card">
-          <div style={{ padding:24 }}>
+          <div style={{ padding:"16px" }}>
             <form onSubmit={handleSubmit}>
 
               {/* Drop zone */}
