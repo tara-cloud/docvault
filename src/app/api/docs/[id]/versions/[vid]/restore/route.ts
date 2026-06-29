@@ -90,3 +90,19 @@ export async function POST(_req: NextRequest, { params }: Params) {
 
   return NextResponse.json({ ok: true });
 }
+
+export async function DELETE(_req: NextRequest, { params }: Params) {
+  const { id, vid } = await params;
+  const ver = await prisma.documentVersion.findUnique({ where: { id: Number(vid) } });
+  if (!ver || ver.documentId !== Number(id)) {
+    return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+  // Delete the version file from disk if it's a file version
+  if (ver.changeType !== "metadata") {
+    const { docPath } = await import("@/lib/files");
+    const { default: fs } = await import("fs");
+    try { fs.unlinkSync(docPath(ver.uuid, ver.fileExt)); } catch { /* already gone */ }
+  }
+  await prisma.documentVersion.delete({ where: { id: Number(vid) } });
+  return NextResponse.json({ ok: true });
+}

@@ -62,6 +62,14 @@ export default function DocDetailPage({ params }: Params) {
     else showToast("danger", "Restore failed.");
   }
 
+  async function handleDeleteVersion(verId: number) {
+    if (!doc) return;
+    if (!confirm("Delete this version from history? This cannot be undone.")) return;
+    const res = await fetch(`/api/docs/${doc.id}/versions/${verId}/restore`, { method: "DELETE" });
+    if (res.ok) { showToast("success", "Version deleted."); fetch(`/api/docs/${id}`).then(r => r.json()).then(setDoc); }
+    else showToast("danger", "Delete failed.");
+  }
+
   if (!doc) return <div style={{ color:"var(--dv-muted)", padding:40 }}>Loading…</div>;
 
   const isPdf    = doc.mimeType === "application/pdf";
@@ -225,6 +233,11 @@ export default function DocDetailPage({ params }: Params) {
                           style={{ background:"var(--dv-surface-2)", border:"1px solid rgba(59,130,246,.3)", color:"var(--dv-accent)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
                           title={isMetadata ? "Restore this metadata state" : "Restore this file version"}>
                           <i className="bi bi-arrow-counterclockwise" />
+                        </button>
+                        <button type="button" onClick={() => handleDeleteVersion(v.id)}
+                          style={{ background:"var(--dv-surface-2)", border:"1px solid rgba(239,68,68,.3)", color:"var(--dv-red)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
+                          title="Delete this version from history">
+                          <i className="bi bi-trash" />
                         </button>
                       </div>
                     </div>
