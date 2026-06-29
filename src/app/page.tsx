@@ -219,15 +219,19 @@ function DashboardInner() {
                   <button type="button" className={`view-toggle-btn${viewMode==="list"?" active":""}`} onClick={() => toggleView("list")} aria-label="List"><i className="bi bi-list-ul" /></button>
                 </div>
               ) : null}
-              {!searching && (
-                <NewFolderButton onCreate={createFolder} />
-              )}
-              <Link href={`/upload${folderId ? `?folder_id=${folderId}` : ""}`} className="dv-btn-success">
-                <i className="bi bi-cloud-arrow-up-fill" /> Upload
-              </Link>
             </div>
           </div>
         </form>
+
+        {/* Action bar — intentionally outside the search <form> so
+            NewFolderButton's submit event cannot bubble to the search form
+            and reset folderId state before the folder API call runs */}
+        <div style={{ display:"flex", gap:8, justifyContent:"flex-end", marginBottom:16, marginTop:-12 }}>
+          {!searching && <NewFolderButton onCreate={createFolder} />}
+          <Link href={`/upload${folderId ? `?folder_id=${folderId}` : ""}`} className="dv-btn-success">
+            <i className="bi bi-cloud-arrow-up-fill" /> Upload
+          </Link>
+        </div>
 
         {/* Breadcrumb */}
         {breadcrumb.length > 0 && (
