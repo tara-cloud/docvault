@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
+import { parseTags, normalizeTags } from "@/lib/utils";
 
 type Params = { params: Promise<{ id: string; vid: string }> };
 
@@ -8,13 +9,28 @@ export async function POST(_req: NextRequest, { params }: Params) {
   const docId = Number(id);
   const verId = Number(vid);
 
-  const doc = await prisma.document.findUnique({ where: { id: docId } });
+  const doc = await prisma.document.findUnique({
+    where: { id: docId },
+    include: { category: true, folder: true },
+  });
   const ver = await prisma.documentVersion.findUnique({ where: { id: verId } });
   if (!doc || !ver || ver.documentId !== docId) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
-  // Archive current as a version
+  // Snapshot current state before restore
+  const currentSnapshot = JSON.stringify({
+    displayName:  doc.displayName,
+    description:  doc.description,
+    categoryId:   doc.categoryId,
+    categoryName: doc.category.name,
+    folderId:     doc.folderId,
+    folderName:   doc.folder?.name ?? null,
+    tags:         parseTags(doc.tags),
+    expiryDate:   doc.expiryDate,
+  });
+
+  // Archive current as a version before restoring
   await prisma.documentVersion.create({
     data: {
       documentId:   docId,
@@ -25,26 +41,51 @@ export async function POST(_req: NextRequest, { params }: Params) {
       fileSize:     doc.fileSize,
       mimeType:     doc.mimeType,
       versionNote:  `Replaced by restore of v${ver.versionNum}`,
+      changeType:   "file",
+      snapshot:     currentSnapshot,
       replacedAt:   new Date().toISOString(),
     },
   });
 
-  // Promote old version to current
-  const newVersionNum = doc.versionNum + 1;
-  await prisma.document.update({
-    where: { id: docId },
-    data: {
-      uuid:         ver.uuid,
-      originalName: ver.originalName,
-      fileExt:      ver.fileExt,
-      fileSize:     ver.fileSize,
-      mimeType:     ver.mimeType,
-      versionNum:   newVersionNum,
-      uploadedAt:   new Date().toISOString(),
-    },
-  });
+  const isMetadata = ver.changeType === "metadata";
 
-  // Remove the old version entry
+  if (isMetadata && ver.snapshot) {
+    // Restore metadata from snapshot
+    type Snap = {
+      displayName: string; description: string | null;
+      categoryId: number; folderId: number | null;
+      tags: string[]; expiryDate: string | null;
+    };
+    const snap = JSON.parse(ver.snapshot) as Snap;
+    await prisma.document.update({
+      where: { id: docId },
+      data: {
+        displayName: snap.displayName,
+        description: snap.description,
+        categoryId:  snap.categoryId,
+        folderId:    snap.folderId,
+        tags:        normalizeTags(snap.tags.join(",")),
+        expiryDate:  snap.expiryDate,
+        uploadedAt:  new Date().toISOString(),
+      },
+    });
+  } else {
+    // Restore file version
+    await prisma.document.update({
+      where: { id: docId },
+      data: {
+        uuid:         ver.uuid,
+        originalName: ver.originalName,
+        fileExt:      ver.fileExt,
+        fileSize:     ver.fileSize,
+        mimeType:     ver.mimeType,
+        versionNum:   doc.versionNum + 1,
+        uploadedAt:   new Date().toISOString(),
+      },
+    });
+  }
+
+  // Remove the restored version entry from history
   await prisma.documentVersion.delete({ where: { id: verId } });
 
   return NextResponse.json({ ok: true });

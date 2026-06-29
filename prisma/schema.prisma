@@ -62,6 +62,8 @@ model DocumentVersion {
   fileSize     Int      @map("file_size")
   mimeType     String   @map("mime_type")
   versionNote  String?  @map("version_note")
+  changeType   String   @default("file") @map("change_type")  // "file" | "metadata"
+  snapshot     String?  // JSON snapshot of metadata at this version
   replacedAt   String   @map("replaced_at")
   document     Document @relation(fields: [documentId], references: [id])
 
