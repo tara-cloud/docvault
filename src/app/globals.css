@@ -787,21 +787,26 @@ code { color: var(--dv-accent); background: var(--dv-accent-dim); padding: 1px 5
     border-top: none;
     border-left: 1px solid var(--dv-border);
     border-radius: 0 var(--dv-r-lg) var(--dv-r-lg) 0 !important;
-    padding: 4px !important;
-    gap: 2px;
+    padding: 0 !important;
+    gap: 0;
     align-self: stretch;
-    justify-content: center;
+    justify-content: stretch;
     background: var(--dv-surface-2) !important;
   }
-  /* Footer: hide download button on mobile to save space */
-  .doc-grid .card.doc-card .card-footer a:nth-child(2) { display: none; }
-  .doc-grid .card.doc-card .card-footer a,
-  .doc-grid .card.doc-card .card-footer button {
-    flex: none !important;
-    padding: 4px !important;
-    font-size: 11px !important;
-    justify-content: center;
+  /* On mobile compact: show only View, hide Download and Move */
+  .doc-grid .card.doc-card .card-footer > *:not(:first-child) { display: none !important; }
+  /* View button fills the whole side column */
+  .doc-grid .card.doc-card .card-footer > *:first-child {
+    flex: 1 !important;
+    width: 44px !important;
+    padding: 0 !important;
+    border-right: none !important;
+    border-radius: 0 var(--dv-r-lg) var(--dv-r-lg) 0 !important;
+    flex-direction: column !important;
+    gap: 2px !important;
+    font-size: 10px !important;
   }
+  .doc-grid .card.doc-card .card-footer > *:first-child span { display: block; font-size: 10px; }
 
   /* Folder grid: 2 cols */
   .folder-grid { grid-template-columns: repeat(2, 1fr) !important; }
