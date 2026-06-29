@@ -70,6 +70,8 @@ export default function DocDetailPage({ params }: Params) {
     else showToast("danger", "Delete failed.");
   }
 
+  const [previewVer, setPreviewVer] = useState<{ id: number; mime: string; name: string } | null>(null);
+
   if (!doc) return <div style={{ color:"var(--dv-muted)", padding:40 }}>Loading…</div>;
 
   const isPdf    = doc.mimeType === "application/pdf";
@@ -223,11 +225,21 @@ export default function DocDetailPage({ params }: Params) {
 
                       <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
                         {!isMetadata && (
-                          <a href={`/api/docs/${doc.id}/versions/${v.id}/download`}
-                            style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-text)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, textDecoration:"none", display:"flex", alignItems:"center" }}
-                            title="Download this version">
-                            <i className="bi bi-download" />
-                          </a>
+                          <>
+                            {(v.mimeType === "application/pdf" || v.mimeType.startsWith("image/")) && (
+                              <button type="button"
+                                onClick={() => setPreviewVer({ id: v.id, mime: v.mimeType, name: `v${v.versionNum} — ${v.fileExt.slice(1).toUpperCase()}` })}
+                                style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
+                                title="Preview this version">
+                                <i className="bi bi-eye" />
+                              </button>
+                            )}
+                            <a href={`/api/docs/${doc.id}/versions/${v.id}/download`}
+                              style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-text)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, textDecoration:"none", display:"flex", alignItems:"center" }}
+                              title="Download this version">
+                              <i className="bi bi-download" />
+                            </a>
+                          </>
                         )}
                         <button type="button" onClick={() => handleRestore(v.id, v.versionNum)}
                           style={{ background:"var(--dv-surface-2)", border:"1px solid rgba(59,130,246,.3)", color:"var(--dv-accent)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
@@ -249,6 +261,30 @@ export default function DocDetailPage({ params }: Params) {
         </div>
       </main>
       <style>{`.dv-btn-primary{background:var(--dv-accent);border:none;color:#fff;padding:6px 14px;border-radius:var(--dv-r);font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}.dv-btn-outline{background:var(--dv-surface-2);border:1px solid var(--dv-border-2);color:var(--dv-subtle);padding:6px 10px;border-radius:var(--dv-r);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:4px}`}</style>
+
+      {/* Version preview modal */}
+      {previewVer && doc && (
+        <div style={{ position:"fixed", inset:0, zIndex:1000, background:"rgba(0,0,0,.8)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+          onClick={() => setPreviewVer(null)}>
+          <div style={{ background:"var(--dv-surface)", border:"1px solid var(--dv-border)", borderRadius:"var(--dv-r-xl)", width:"min(90vw,1100px)", maxHeight:"90vh", display:"flex", flexDirection:"column" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderBottom:"1px solid var(--dv-border)" }}>
+              <span style={{ fontWeight:600, fontSize:14, flex:1 }}>{previewVer.name}</span>
+              <a href={`/api/docs/${doc.id}/versions/${previewVer.id}/download`}
+                style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border-2)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 10px", textDecoration:"none", fontSize:12 }}>
+                <i className="bi bi-download me-1" />Download
+              </a>
+              <button type="button" onClick={() => setPreviewVer(null)} style={{ background:"none", border:"none", color:"var(--dv-muted)", cursor:"pointer", fontSize:20, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ flex:1, overflow:"hidden", background:"var(--dv-surface-2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              {previewVer.mime === "application/pdf"
+                ? <embed src={`/api/docs/${doc.id}/versions/${previewVer.id}/download`} type="application/pdf" style={{ width:"100%", height:"70vh", border:"none", display:"block" }} />
+                : <img src={`/api/docs/${doc.id}/versions/${previewVer.id}/download`} alt={previewVer.name} style={{ maxWidth:"100%", maxHeight:"70vh", objectFit:"contain" }} />
+              }
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
