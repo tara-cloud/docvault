@@ -6,7 +6,8 @@ import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
 
-export const config = { api: { bodyParser: false } };
+// Force Node.js runtime for this route — enables large file uploads via req.formData()
+export const runtime = "nodejs";
 
 function enrichDoc(doc: {
   id: number; uuid: string; originalName: string; displayName: string;
@@ -108,8 +109,8 @@ export async function POST(req: NextRequest) {
     const mime = ALLOWED_MIME[ext];
     if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
 
-    if (file.size > 50 * 1024 * 1024) {
-      return NextResponse.json({ error: "File exceeds 50 MB limit" }, { status: 413 });
+    if (file.size > 100 * 1024 * 1024) {
+      return NextResponse.json({ error: "File exceeds 100 MB limit" }, { status: 413 });
     }
 
     const id = randomUUID();

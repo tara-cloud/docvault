@@ -160,7 +160,7 @@ function UploadInner() {
                     {file ? file.name : "Drop file here or click to browse"}
                   </div>
                   <div style={{ fontSize:12, color:"var(--dv-muted)", marginTop:4 }}>
-                    {file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : "PDF, PNG, JPG, GIF, WEBP, DOCX — max 50 MB"}
+                    {file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : "PDF, PNG, JPG, GIF, WEBP, DOCX — max 100 MB"}
                   </div>
                 </div>
                 {file && (

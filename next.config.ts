@@ -3,8 +3,10 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   eslint: { ignoreDuringBuilds: true },
+  // 110 MB limit for file uploads (route handlers + server actions)
+  middlewareClientMaxBodySize: 110 * 1024 * 1024,
   experimental: {
-    serverActions: { bodySizeLimit: "52mb" },
+    serverActions: { bodySizeLimit: "110mb" },
   },
 };
 
