@@ -4,7 +4,6 @@ import uuid
 import sqlite3
 import functools
 import tarfile
-import shutil
 import secrets
 import threading
 import time
