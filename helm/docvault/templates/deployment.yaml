@@ -37,8 +37,8 @@ spec:
                 secretKeyRef:
                   name: docvault-secret
                   key: secret-key
-            - name: DB_PATH
-              value: "/data/docvault.db"
+            - name: DATABASE_URL
+              value: "file:/data/docvault.db"
             - name: UPLOAD_DIR
               value: "/data/uploads"
             - name: BACKUP_DIR

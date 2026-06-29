@@ -6,6 +6,34 @@ This project follows [Semantic Versioning](https://semver.org) — see [docs/ver
 
 ---
 
+## [2.0.0] - 2026-06-29
+
+### Breaking Change
+
+Full rewrite from Python/Flask + Jinja2 + Bootstrap to **Next.js 15 + React 19**.
+Existing data (SQLite DB + uploads) is fully compatible — zero migration required.
+
+### Added
+
+- Next.js 15 App Router with standalone Docker output
+- React 19 client components with custom CSS design system
+- Prisma 6 + SQLite (same schema, reads existing DB)
+- iron-session cookie auth (same behaviour as Flask sessions)
+- Settings page with **tabs**: Password / Appearance / Backup
+- Backup tab: Create Now, configurable keep-N and scheduled hour,
+  list with download / **Restore** / delete
+- Daily auto-backup via node-cron at user-configured hour
+- Full data restore from tar.gz (DB + uploads) via UI
+
+### Changed
+
+- Dockerfile replaced: Node 20 Alpine multi-stage, `output: standalone`
+- CI workflow updated: Node type-check + build (replaces Python flake8)
+- `DATABASE_URL` env var replaces `DB_PATH` (Prisma format)
+- All API routes are Next.js App Router (`/api/...`)
+
+---
+
 ## [1.5.0] - 2026-06-29
 
 ### Changed
