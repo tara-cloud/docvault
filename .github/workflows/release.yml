@@ -113,7 +113,8 @@ jobs:
       - name: Ensure namespace exists and is Helm-adoptable
         run: |
           kubectl create namespace docvault --dry-run=client -o yaml | kubectl apply -f -
-          kubectl label namespace docvault app.kubernetes.io/managed-by=Helm --overwrite
+          kubectl label namespace docvault \
+            app.kubernetes.io/managed-by=Helm --overwrite
           kubectl annotate namespace docvault \
             meta.helm.sh/release-name=docvault \
             meta.helm.sh/release-namespace=docvault \
@@ -132,21 +133,31 @@ jobs:
             done
           done
 
-      - name: Create credentials secret (once — never overwritten)
+      - name: Create credentials secret (once — skip if already exists)
         run: |
-          kubectl create secret generic docvault-secret \
-            --namespace docvault \
-            --from-literal=app-password="${{ secrets.DOCVAULT_PASSWORD }}" \
-            --from-literal=secret-key="${{ secrets.DOCVAULT_SECRET_KEY }}" \
-            --dry-run=client -o yaml | \
-          kubectl apply --server-side --field-manager=docvault-init \
-            --force-conflicts=false -f - 2>/dev/null || \
-          echo "Secret already exists — skipping to preserve existing credentials."
+          if ! kubectl get secret docvault-secret -n docvault &>/dev/null; then
+            kubectl create secret generic docvault-secret \
+              --namespace docvault \
+              --from-literal=app-password="${{ secrets.DOCVAULT_PASSWORD }}" \
+              --from-literal=secret-key="${{ secrets.DOCVAULT_SECRET_KEY }}"
+            echo "Secret created."
+          else
+            echo "Secret already exists — preserving existing credentials."
+          fi
+
+      - name: Ensure backup directory exists on host
+        run: sudo mkdir -p /BACKUP/AppData/docvault
 
       - name: Pre-pull image
         run: |
           sudo ctr --namespace k8s.io images pull \
             docker.io/${{ env.IMAGE }}:${{ needs.release.outputs.version }}
+
+      - name: Restart existing deployment
+        run: |
+          kubectl rollout restart deployment/docvault -n docvault 2>/dev/null || true
+          kubectl wait --for=delete pod -l app=docvault -n docvault \
+            --timeout=60s 2>/dev/null || true
 
       - name: Helm upgrade
         run: |
