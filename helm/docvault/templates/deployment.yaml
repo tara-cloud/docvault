@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: docvault
+  namespace: docvault
+  labels:
+    app: docvault
+    chart: {{ .Chart.Name }}-{{ .Chart.Version }}
+spec:
+  replicas: {{ .Values.replicaCount }}
+  selector:
+    matchLabels:
+      app: docvault
+  template:
+    metadata:
+      labels:
+        app: docvault
+        version: {{ .Values.image.tag | quote }}
+    spec:
+      containers:
+        - name: docvault
+          image: "{{ .Values.image.repository }}:{{ .Values.image.tag }}"
+          imagePullPolicy: {{ .Values.image.pullPolicy }}
+          securityContext:
+            runAsUser: 0
+            runAsGroup: 0
+          ports:
+            - containerPort: 9091
+          env:
+            - name: APP_PASSWORD
+              value: {{ .Values.env.appPassword | quote }}
+            - name: SECRET_KEY
+              value: {{ .Values.env.secretKey | quote }}
+            - name: DB_PATH
+              value: "/data/docvault.db"
+            - name: UPLOAD_DIR
+              value: "/data/uploads"
+          resources:
+            requests:
+              cpu: {{ .Values.resources.requests.cpu | quote }}
+              memory: {{ .Values.resources.requests.memory | quote }}
+            limits:
+              cpu: {{ .Values.resources.limits.cpu | quote }}
+              memory: {{ .Values.resources.limits.memory | quote }}
+          livenessProbe:
+            httpGet:
+              path: /health
+              port: 9091
+            initialDelaySeconds: {{ .Values.probes.initialDelaySeconds }}
+            periodSeconds: {{ .Values.probes.periodSeconds }}
+          readinessProbe:
+            httpGet:
+              path: /health
+              port: 9091
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          volumeMounts:
+            - name: data
+              mountPath: /data
+
+      volumes:
+        - name: data
+          hostPath:
+            path: {{ .Values.dataPath }}
+            type: DirectoryOrCreate
