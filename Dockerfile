@@ -1,23 +1,28 @@
+# syntax=docker/dockerfile:1
 FROM node:20-alpine AS deps
 WORKDIR /app
 COPY package*.json ./
-RUN npm ci --prefer-offline
+RUN --mount=type=cache,target=/root/.npm \
+    npm ci --prefer-offline
 
 FROM node:20-alpine AS builder
 WORKDIR /app
 COPY --from=deps /app/node_modules ./node_modules
-COPY . .
+# Copy prisma schema first — generates client before copying full source
+COPY prisma ./prisma
 RUN npx prisma generate
+# Now copy the rest of the source
+COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN npm run build
-# Ensure public dir exists even if empty (prevents COPY failure in runner)
+# Ensure public dir exists for runner COPY
 RUN mkdir -p /app/public
 
 FROM node:20-alpine AS runner
 WORKDIR /app
 RUN addgroup --system --gid 1001 nodejs && \
-    adduser  --system --uid 1001 nextjs
-RUN mkdir -p /data/uploads /backup/docvault && \
+    adduser  --system --uid 1001 nextjs && \
+    mkdir -p /data/uploads /backup/docvault && \
     chown -R nextjs:nodejs /data /backup
 COPY --from=builder --chown=nextjs:nodejs /app/.next/standalone ./
 COPY --from=builder --chown=nextjs:nodejs /app/.next/static ./.next/static
