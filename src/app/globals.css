@@ -232,15 +232,27 @@ main { animation: fadeUp .22s ease both; }
 
 /* ─── Search bar ─────────────────────────────────────────────────────────── */
 .search-bar {
+  width: 100%;
   background: var(--dv-surface);
   border: 1px solid var(--dv-border);
   border-radius: var(--dv-r-lg);
   padding: 12px 14px;
   transition: border-color var(--dv-t), box-shadow var(--dv-t);
+  box-sizing: border-box;
 }
 .search-bar:focus-within {
   border-color: var(--dv-accent);
   box-shadow: 0 0 0 3px var(--dv-accent-dim);
+}
+/* Input inside search bar — no double-border on left */
+.search-bar .form-control {
+  border-left: none !important;
+}
+.search-bar .input-group-text {
+  border-right: none;
+  background: var(--dv-surface-2) !important;
+  border-color: var(--dv-border) !important;
+  color: var(--dv-muted);
 }
 .search-bar .form-control, .search-bar .form-select {
   background: var(--dv-surface-3) !important;
