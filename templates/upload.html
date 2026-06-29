@@ -12,6 +12,24 @@
       <h4 class="mb-0 fw-semibold">Upload Document</h4>
     </div>
 
+    {# Step indicator #}
+    <div class="d-flex align-items-center gap-0 mb-4" id="upload-steps">
+      <div class="d-flex align-items-center gap-2 step-item active" id="step-1">
+        <div class="step-dot">1</div>
+        <span class="small fw-semibold">Choose File</span>
+      </div>
+      <div class="step-line flex-grow-1"></div>
+      <div class="d-flex align-items-center gap-2 step-item" id="step-2">
+        <div class="step-dot">2</div>
+        <span class="small fw-semibold">Details</span>
+      </div>
+      <div class="step-line flex-grow-1"></div>
+      <div class="d-flex align-items-center gap-2 step-item" id="step-3">
+        <div class="step-dot">3</div>
+        <span class="small fw-semibold">Upload</span>
+      </div>
+    </div>
+
     <div class="card">
       <div class="card-body p-4">
         <form method="POST" action="{{ url_for('upload_post') }}" enctype="multipart/form-data" id="upload-form">
@@ -88,11 +106,11 @@
               <label class="form-label small fw-semibold d-flex align-items-center gap-2">
                 Expiry Date
                 <span class="d-flex align-items-center gap-1" style="font-weight:normal;color:var(--dv-muted)">
-                  <input type="checkbox" id="has-expiry" class="form-check-input m-0" />
+                  <input type="checkbox" id="has-expiry" class="form-check-input m-0" aria-label="Has expiry date" />
                   <span class="small">Has expiry</span>
                 </span>
               </label>
-              <input type="date" id="expiry_date" name="expiry_date" class="form-control d-none" disabled />
+              <input type="date" id="expiry_date" name="expiry_date" class="form-control d-none" disabled aria-label="Expiry date" />
               <div class="form-text">Enable for ID cards, licenses, insurance, etc.</div>
             </div>
           </div>
@@ -107,8 +125,19 @@
             <div class="form-text">Press <kbd>Enter</kbd> or <kbd>,</kbd> after each tag.</div>
           </div>
 
+          {# ── Upload progress ── #}
+          <div class="upload-progress-wrap mb-3" id="upload-progress-wrap">
+            <div class="d-flex align-items-center justify-content-between mb-1">
+              <span class="small fw-semibold" style="color:var(--dv-text)" id="upload-status">Uploading…</span>
+              <span class="small" style="color:var(--dv-muted)" id="upload-pct">0%</span>
+            </div>
+            <div class="progress">
+              <div class="progress-bar" id="upload-bar" style="width:0%"></div>
+            </div>
+          </div>
+
           <div class="d-flex gap-2">
-            <button type="submit" class="btn btn-primary px-4">
+            <button type="submit" class="btn btn-primary px-4" id="upload-btn">
               <i class="bi bi-cloud-upload me-1"></i> Upload
             </button>
             <a href="{{ url_for('dashboard') }}" class="btn btn-outline-secondary">Cancel</a>
@@ -132,8 +161,26 @@
   const fileIcon    = document.getElementById('file-icon');
   const clearBtn    = document.getElementById('clear-file');
   const nameField   = document.getElementById('display_name');
+  const form        = document.getElementById('upload-form');
+  const uploadBtn   = document.getElementById('upload-btn');
+  const progressWrap = document.getElementById('upload-progress-wrap');
+  const progressBar = document.getElementById('upload-bar');
+  const progressPct = document.getElementById('upload-pct');
+  const statusLabel = document.getElementById('upload-status');
 
-  const typeIcons = { pdf:'file-earmark-pdf', 'image':'file-earmark-image', docx:'file-earmark-word' };
+  // Step indicator
+  const step1 = document.getElementById('step-1');
+  const step2 = document.getElementById('step-2');
+  const step3 = document.getElementById('step-3');
+
+  function setStep(n) {
+    [step1, step2, step3].forEach((s, i) => {
+      s.classList.toggle('active', i < n);
+      s.classList.toggle('done', i < n - 1);
+    });
+  }
+
+  const typeIcons = { pdf:'file-earmark-pdf', image:'file-earmark-image', docx:'file-earmark-word' };
   const typeColors = { pdf:'#f85149', image:'#3fb950', docx:'#58a6ff' };
 
   function formatBytes(b) {
@@ -159,6 +206,7 @@
     zone.parentElement.classList.add('file-chosen');
     preview.classList.remove('d-none');
     if (!nameField.value) nameField.value = file.name.replace(/\.[^.]+$/, '');
+    setStep(2);
   }
 
   function clearFile() {
@@ -166,6 +214,7 @@
     preview.classList.add('d-none');
     zone.parentElement.classList.remove('file-chosen');
     nameField.value = '';
+    setStep(1);
   }
 
   fileInput.addEventListener('change', function () {
@@ -186,6 +235,57 @@
       fileInput.files = dt.files;
       showFile(file);
     }
+  });
+
+  // XHR upload with progress
+  form.addEventListener('submit', function (e) {
+    e.preventDefault();
+    if (!fileInput.files.length) { fileInput.reportValidity(); return; }
+    if (!nameField.value.trim()) { nameField.reportValidity(); return; }
+
+    setStep(3);
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-1" aria-hidden="true"></span>Uploading…';
+    progressWrap.classList.add('visible');
+
+    const data = new FormData(form);
+    const xhr  = new XMLHttpRequest();
+
+    xhr.upload.addEventListener('progress', ev => {
+      if (ev.lengthComputable) {
+        const pct = Math.round((ev.loaded / ev.total) * 100);
+        progressBar.style.width = pct + '%';
+        progressPct.textContent = pct + '%';
+        if (pct === 100) {
+          statusLabel.textContent = 'Processing…';
+          progressBar.style.background = '#3fb950';
+        }
+      }
+    });
+
+    xhr.addEventListener('load', () => {
+      if (xhr.status >= 200 && xhr.status < 400) {
+        statusLabel.textContent = 'Done!';
+        progressBar.style.width = '100%';
+        // Follow redirect from Flask
+        window.location.href = xhr.responseURL || '{{ url_for("dashboard") }}';
+      } else {
+        statusLabel.textContent = 'Upload failed.';
+        progressBar.style.background = '#f85149';
+        uploadBtn.disabled = false;
+        uploadBtn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Try Again';
+      }
+    });
+
+    xhr.addEventListener('error', () => {
+      statusLabel.textContent = 'Network error.';
+      progressBar.style.background = '#f85149';
+      uploadBtn.disabled = false;
+      uploadBtn.innerHTML = '<i class="bi bi-cloud-upload me-1"></i>Try Again';
+    });
+
+    xhr.open('POST', form.action);
+    xhr.send(data);
   });
 
   // Tag chip widget
@@ -226,4 +326,41 @@
   });
 })();
 </script>
+
+<style>
+.step-item { color: var(--dv-muted); white-space: nowrap; }
+.step-item.active { color: var(--dv-text); }
+.step-dot {
+  width: 28px; height: 28px;
+  border-radius: 50%;
+  background: var(--dv-surface-2);
+  border: 2px solid var(--dv-border);
+  display: flex; align-items: center; justify-content: center;
+  font-size: 0.75rem; font-weight: 700;
+  color: var(--dv-muted);
+  transition: all 0.2s ease;
+  flex-shrink: 0;
+}
+.step-item.active .step-dot {
+  background: var(--dv-accent);
+  border-color: var(--dv-accent);
+  color: #fff;
+  box-shadow: 0 0 0 3px var(--dv-accent-glow);
+}
+.step-item.done .step-dot {
+  background: #3fb950;
+  border-color: #3fb950;
+  color: #fff;
+}
+.step-item.done .step-dot::before { content: '✓'; font-size: 0.7rem; }
+.step-item.done .step-dot span { display: none; }
+.step-line {
+  height: 2px;
+  background: var(--dv-border);
+  margin: 0 0.5rem;
+  min-width: 20px;
+  transition: background 0.2s ease;
+}
+.step-item.done + .step-line { background: #3fb950; }
+</style>
 {% endblock %}

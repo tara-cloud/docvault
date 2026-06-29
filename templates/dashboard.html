@@ -19,46 +19,53 @@
     </div>
   </div>
   <div class="col-sm-4">
-    <div class="card stat-card border-0">
-      <div class="card-body d-flex align-items-center gap-3 py-3">
-        <div class="stat-icon" style="background:rgba(248,81,73,0.12)">
-          <i class="bi bi-calendar-x" style="color:#f85149"></i>
-        </div>
-        <div>
-          <div class="stat-value" style="color:#f85149">{{ expiring_count }}</div>
-          <div class="stat-label">Expiring Soon</div>
+    <a href="{{ url_for('dashboard', expiry_filter='expiring') }}" class="text-decoration-none">
+      <div class="card stat-card border-0 clickable">
+        <div class="card-body d-flex align-items-center gap-3 py-3">
+          <div class="stat-icon" style="background:rgba(248,81,73,0.12)">
+            <i class="bi bi-calendar-x" style="color:#f85149"></i>
+          </div>
+          <div>
+            <div class="stat-value" style="color:#f85149">{{ expiring_count }}</div>
+            <div class="stat-label">Expiring Soon <i class="bi bi-arrow-right-short small"></i></div>
+          </div>
         </div>
       </div>
-    </div>
+    </a>
   </div>
   <div class="col-sm-4">
-    <div class="card stat-card border-0">
-      <div class="card-body d-flex align-items-center gap-3 py-3">
-        <div class="stat-icon" style="background:rgba(139,148,158,0.12)">
-          <i class="bi bi-clock-history" style="color:var(--dv-muted)"></i>
-        </div>
-        <div>
-          <div class="stat-value" style="color:var(--dv-muted)">{{ expired_count }}</div>
-          <div class="stat-label">Expired</div>
+    <a href="{{ url_for('dashboard', expiry_filter='expired') }}" class="text-decoration-none">
+      <div class="card stat-card border-0 clickable">
+        <div class="card-body d-flex align-items-center gap-3 py-3">
+          <div class="stat-icon" style="background:rgba(139,148,158,0.12)">
+            <i class="bi bi-clock-history" style="color:var(--dv-muted)"></i>
+          </div>
+          <div>
+            <div class="stat-value" style="color:var(--dv-muted)">{{ expired_count }}</div>
+            <div class="stat-label">Expired <i class="bi bi-arrow-right-short small"></i></div>
+          </div>
         </div>
       </div>
-    </div>
+    </a>
   </div>
 </div>
 
 {# ── Search bar ── #}
-<form method="GET" action="{{ url_for('dashboard') }}" class="search-bar mb-4">
+<form method="GET" action="{{ url_for('dashboard') }}" class="search-bar mb-4" id="search-form">
   <div class="row g-2 align-items-center">
     <div class="col-12 col-md">
       <div class="input-group">
-        <span class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border);">
+        <label for="search-input" class="input-group-text" style="background:var(--dv-surface-2);border-color:var(--dv-border);">
           <i class="bi bi-search" style="color:var(--dv-muted)"></i>
-        </span>
-        <input type="text" name="q" class="form-control" placeholder="Search name, description, tags…" value="{{ q }}" />
+          <span class="visually-hidden">Search</span>
+        </label>
+        <input type="text" name="q" id="search-input" class="form-control"
+               placeholder="Search name, description, tags… (/ to focus)" value="{{ q }}" />
       </div>
     </div>
     <div class="col-6 col-md-auto">
-      <select name="category_id" class="form-select" style="min-width:140px">
+      <label for="filter-category" class="visually-hidden">Filter by category</label>
+      <select name="category_id" id="filter-category" class="form-select" style="min-width:140px">
         <option value="">All Categories</option>
         {% for cat in categories %}
           <option value="{{ cat.id }}" {% if selected_category_id == cat.id %}selected{% endif %}>{{ cat.name }}</option>
@@ -66,7 +73,8 @@
       </select>
     </div>
     <div class="col-6 col-md-auto">
-      <select name="expiry_filter" class="form-select" style="min-width:150px">
+      <label for="filter-expiry" class="visually-hidden">Filter by expiry</label>
+      <select name="expiry_filter" id="filter-expiry" class="form-select" style="min-width:150px">
         <option value=""         {% if not expiry_filter             %}selected{% endif %}>All Documents</option>
         <option value="expiring" {% if expiry_filter == 'expiring'   %}selected{% endif %}>Expiring (90d)</option>
         <option value="expired"  {% if expiry_filter == 'expired'    %}selected{% endif %}>Expired</option>
@@ -78,7 +86,18 @@
         <i class="bi bi-x-lg"></i>
       </a>
     </div>
-    <div class="col-auto ms-md-auto d-flex gap-2">
+    <div class="col-auto ms-md-auto d-flex gap-2 align-items-center">
+      {# View toggle #}
+      {% if docs %}
+      <div class="view-toggle" title="Toggle view">
+        <button type="button" class="view-toggle-btn active" id="view-grid" aria-label="Grid view">
+          <i class="bi bi-grid-3x3-gap"></i>
+        </button>
+        <button type="button" class="view-toggle-btn" id="view-list" aria-label="List view">
+          <i class="bi bi-list-ul"></i>
+        </button>
+      </div>
+      {% endif %}
       {% if not searching %}
         <button type="button" class="btn btn-outline-secondary d-flex align-items-center gap-1"
                 data-bs-toggle="modal" data-bs-target="#newFolderModal">
@@ -96,7 +115,6 @@
 {% if breadcrumb or current_folder %}
 <nav aria-label="breadcrumb" class="mb-3">
   <ol class="breadcrumb dv-breadcrumb mb-0">
-    {# Root crumb — also a drop target to move docs out of any folder #}
     <li class="breadcrumb-item">
       <a href="{{ url_for('dashboard') }}" class="text-decoration-none"
          data-drop-folder-id=""
@@ -145,7 +163,6 @@
 <div class="row row-cols-2 row-cols-sm-3 row-cols-md-4 row-cols-lg-5 g-2 mb-4">
   {% for sf in subfolders %}
   <div class="col">
-    {# Wrapper is the drop target; inner <a> handles navigation click #}
     <div class="folder-drop-target"
          data-folder-id="{{ sf.id }}"
          data-folder-name="{{ sf.name }}">
@@ -171,7 +188,8 @@
 <div class="row row-cols-1 row-cols-md-2 row-cols-xl-3 g-3" id="doc-grid">
   {% for doc in docs %}
   {% set dtype = 'pdf' if doc.mime_type == 'application/pdf' else ('image' if doc.mime_type.startswith('image') else ('docx' if 'word' in doc.mime_type else 'other')) %}
-  <div class="col doc-col" data-doc-id="{{ doc.id }}" data-doc-name="{{ doc.display_name }}">
+  <div class="col doc-col" data-doc-id="{{ doc.id }}" data-doc-name="{{ doc.display_name }}"
+       data-doc-type="{{ dtype }}" data-doc-mime="{{ doc.mime_type }}">
     <div class="card h-100 doc-card" data-type="{{ dtype }}" draggable="true">
       <div class="card-header d-flex align-items-center gap-2">
         <i class="bi bi-grip-vertical drag-handle" title="Drag to move to folder"></i>
@@ -194,6 +212,17 @@
       </div>
 
       <div class="card-body pb-2">
+        {# Quick-preview button (shown on hover via CSS) #}
+        {% if doc.mime_type == 'application/pdf' or doc.mime_type.startswith('image') %}
+        <button type="button"
+                class="btn btn-sm btn-primary quick-preview-btn shadow"
+                data-doc-id="{{ doc.id }}"
+                data-doc-name="{{ doc.display_name }}"
+                data-doc-mime="{{ doc.mime_type }}"
+                title="Quick preview">
+          <i class="bi bi-eye-fill me-1"></i>Preview
+        </button>
+        {% endif %}
         <h6 class="card-title fw-semibold mb-1">
           <a href="{{ url_for('doc_detail', doc_id=doc.id) }}" class="text-decoration-none" style="color:var(--dv-text)">
             {{ doc.display_name }}
@@ -283,14 +312,43 @@
 </div>
 {% endif %}
 
+{# ── Quick Preview Modal ── #}
+<div class="modal fade" id="quickPreviewModal" tabindex="-1" aria-labelledby="quickPreviewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-xl modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header py-2 px-3">
+        <h6 class="modal-title fw-semibold text-truncate me-3" id="quickPreviewModalLabel" style="max-width:500px">
+          <span id="qp-title-text">&nbsp;</span>
+        </h6>
+        <div class="d-flex align-items-center gap-2 ms-auto">
+          <a id="qp-full-view" href="#" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-arrows-fullscreen me-1"></i>Full View
+          </a>
+          <a id="qp-download" href="#" class="btn btn-sm btn-outline-secondary">
+            <i class="bi bi-download"></i>
+          </a>
+          <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+        </div>
+      </div>
+      <div class="modal-body p-0" id="qp-body" style="min-height:70vh;background:var(--dv-surface-2)">
+        <div class="d-flex align-items-center justify-content-center h-100" style="min-height:70vh">
+          <output aria-live="polite" aria-label="Loading preview">
+            <span class="spinner-border text-primary" aria-hidden="true"></span>
+          </output>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
 {# ── New Folder Modal ── #}
 <div class="modal fade" id="newFolderModal" tabindex="-1" aria-labelledby="newFolderModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered">
-    <div class="modal-content" style="background:var(--dv-surface);border:1px solid var(--dv-border)">
+    <div class="modal-content">
       <form method="POST" action="{{ url_for('folder_create') }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
         <input type="hidden" name="parent_id" value="{{ folder_id or '' }}" />
-        <div class="modal-header" style="border-color:var(--dv-border)">
+        <div class="modal-header">
           <h6 class="modal-title fw-semibold" id="newFolderModalLabel">
             <i class="bi bi-folder-plus me-2" style="color:#d29922"></i>New Folder
           </h6>
@@ -307,7 +365,7 @@
           </div>
           {% endif %}
         </div>
-        <div class="modal-footer" style="border-color:var(--dv-border)">
+        <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-folder-plus me-1"></i>Create
@@ -322,10 +380,10 @@
 {% if current_folder %}
 <div class="modal fade" id="renameFolderModal" tabindex="-1" aria-labelledby="renameFolderModalLabel" aria-hidden="true">
   <div class="modal-dialog modal-sm modal-dialog-centered">
-    <div class="modal-content" style="background:var(--dv-surface);border:1px solid var(--dv-border)">
+    <div class="modal-content">
       <form method="POST" action="{{ url_for('folder_rename', folder_id=current_folder.id) }}">
         <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-        <div class="modal-header" style="border-color:var(--dv-border)">
+        <div class="modal-header">
           <h6 class="modal-title fw-semibold" id="renameFolderModalLabel">
             <i class="bi bi-pencil me-2"></i>Rename Folder
           </h6>
@@ -336,7 +394,7 @@
           <input type="text" id="renameFolderName" name="name" class="form-control"
                  value="{{ current_folder.name }}" required autofocus maxlength="100" />
         </div>
-        <div class="modal-footer" style="border-color:var(--dv-border)">
+        <div class="modal-footer">
           <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
           <button type="submit" class="btn btn-primary btn-sm">
             <i class="bi bi-check-lg me-1"></i>Rename
@@ -348,6 +406,9 @@
 </div>
 {% endif %}
 
+{# Keyboard shortcut hint #}
+<div class="shortcut-hint" id="shortcut-hint">Press <kbd>/</kbd> to search</div>
+
 {% endblock %}
 
 {% block scripts %}
@@ -356,6 +417,104 @@
   const CSRF = '{{ csrf_token() }}';
   let dragDocId   = null;
   let dragDocName = null;
+
+  // ── Keyboard shortcut: / to focus search ─────────────────────────────────
+  const searchInput = document.getElementById('search-input');
+  const hint = document.getElementById('shortcut-hint');
+
+  if (searchInput && !searchInput.value) {
+    setTimeout(() => { hint.classList.add('show'); }, 1500);
+    setTimeout(() => { hint.classList.remove('show'); }, 5000);
+  }
+
+  document.addEventListener('keydown', e => {
+    if (e.key === '/' && document.activeElement !== searchInput &&
+        document.activeElement.tagName !== 'INPUT' &&
+        document.activeElement.tagName !== 'TEXTAREA') {
+      e.preventDefault();
+      searchInput.focus();
+      searchInput.select();
+    }
+    if (e.key === 'Escape' && document.activeElement === searchInput) {
+      searchInput.blur();
+    }
+  });
+
+  // ── View toggle (grid / list) ─────────────────────────────────────────────
+  const grid      = document.getElementById('doc-grid');
+  const btnGrid   = document.getElementById('view-grid');
+  const btnList   = document.getElementById('view-list');
+  const VIEW_KEY  = 'dv_view_mode';
+
+  function applyView(mode) {
+    if (!grid) return;
+    if (mode === 'list') {
+      grid.classList.add('list-view');
+      grid.classList.remove('row-cols-md-2', 'row-cols-xl-3');
+      btnGrid && btnGrid.classList.remove('active');
+      btnList && btnList.classList.add('active');
+    } else {
+      grid.classList.remove('list-view');
+      grid.classList.add('row-cols-md-2', 'row-cols-xl-3');
+      btnGrid && btnGrid.classList.add('active');
+      btnList && btnList.classList.remove('active');
+    }
+    localStorage.setItem(VIEW_KEY, mode);
+  }
+
+  const savedView = localStorage.getItem(VIEW_KEY) || 'grid';
+  applyView(savedView);
+  btnGrid && btnGrid.addEventListener('click', () => applyView('grid'));
+  btnList && btnList.addEventListener('click', () => applyView('list'));
+
+  // ── Quick Preview Modal ───────────────────────────────────────────────────
+  const qpModal  = document.getElementById('quickPreviewModal');
+  const qpTitle  = document.getElementById('quickPreviewModalLabel');
+  const qpBody   = document.getElementById('qp-body');
+  const qpFull   = document.getElementById('qp-full-view');
+  const qpDl     = document.getElementById('qp-download');
+
+  if (qpModal) {
+    const bsModal = new bootstrap.Modal(qpModal);
+
+    document.querySelectorAll('.quick-preview-btn').forEach(btn => {
+      btn.addEventListener('click', e => {
+        e.preventDefault();
+        e.stopPropagation();
+        const docId   = btn.dataset.docId;
+        const docName = btn.dataset.docName;
+        const mime    = btn.dataset.docMime;
+
+        qpTitle.querySelector('#qp-title-text').textContent = docName;
+        qpFull.href  = `/doc/${docId}`;
+        qpDl.href    = `/doc/${docId}/download`;
+        qpBody.innerHTML = `
+          <div class="d-flex align-items-center justify-content-center" style="min-height:70vh">
+            <output aria-live="polite" aria-label="Loading preview">
+              <span class="spinner-border text-primary" aria-hidden="true"></span>
+            </output>
+          </div>`;
+
+        bsModal.show();
+
+        if (mime === 'application/pdf') {
+          qpBody.innerHTML = `<embed src="/doc/${docId}/preview-file"
+            type="application/pdf" style="width:100%;height:70vh;border:none;display:block;" />`;
+        } else {
+          qpBody.innerHTML = `
+            <div class="d-flex align-items-center justify-content-center p-3" style="min-height:70vh;background:var(--dv-surface-2)">
+              <img src="/doc/${docId}/preview-file"
+                   style="max-width:100%;max-height:70vh;object-fit:contain;border-radius:8px;"
+                   alt="${docName}" />
+            </div>`;
+        }
+      });
+    });
+
+    qpModal.addEventListener('hidden.bs.modal', () => {
+      qpBody.innerHTML = '';
+    });
+  }
 
   // ── Drag source: doc cards ────────────────────────────────────────────────
   document.querySelectorAll('.doc-col').forEach(col => {
@@ -404,7 +563,6 @@
       e.preventDefault();
       el.classList.remove('breadcrumb-drag-over');
       if (!dragDocId) return;
-      // Prevent navigation click from firing on drop
       e.stopPropagation();
       moveDoc(dragDocId, dragDocName, el.dataset.dropFolderId, el.dataset.dropLabel);
     });
@@ -414,11 +572,10 @@
   async function moveDoc(docId, docName, folderId, folderName) {
     const body = new FormData();
     body.append('csrf_token', CSRF);
-    body.append('folder_id', folderId);          // "" = root
+    body.append('folder_id', folderId);
     try {
       const resp = await fetch(`/doc/${docId}/move`, { method: 'POST', body });
       if (resp.ok) {
-        // Remove card from grid immediately
         const col = document.querySelector(`.doc-col[data-doc-id="${docId}"]`);
         if (col) {
           col.style.transition = 'opacity 0.2s';
@@ -434,7 +591,7 @@
     }
   }
 
-  // ── Mini toast helper (reuse base.html pattern) ───────────────────────────
+  // ── Toast helper ─────────────────────────────────────────────────────────
   function showToast(cat, msg) {
     const container = document.getElementById('toast-container');
     if (!container) return;
