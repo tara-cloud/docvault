@@ -163,16 +163,22 @@ function DashboardInner() {
 
         {/* Search bar */}
         <form onSubmit={submitSearch} className="search-bar" style={{ marginBottom: 20 }}>
-          {/* Row 1: search input full width */}
-          <div style={{ display:"flex", gap:8, marginBottom:8 }}>
-            <div style={{ flex:1, display:"flex" }}>
-              <label htmlFor="search-input" className="input-group-text">
-                <i className="bi bi-search" /><span className="visually-hidden">Search</span>
-              </label>
-              <input ref={searchRef} id="search-input" className="form-control" type="text"
-                placeholder="Search name, description, tags… (press / to focus)"
-                value={q} onChange={e => setQ(e.target.value)} />
-            </div>
+          {/* Row 1: search input — full width */}
+          <div style={{ display:"flex", width:"100%", marginBottom:8 }}>
+            <span className="input-group-text" style={{ borderRadius:"var(--dv-r) 0 0 var(--dv-r)", flexShrink:0 }}>
+              <i className="bi bi-search" />
+              <span className="visually-hidden">Search</span>
+            </span>
+            <input
+              ref={searchRef}
+              id="search-input"
+              className="form-control"
+              type="text"
+              placeholder="Search name, description, tags…"
+              value={q}
+              onChange={e => setQ(e.target.value)}
+              style={{ flex:1, minWidth:0, borderRadius:"0 var(--dv-r) var(--dv-r) 0" }}
+            />
           </div>
           {/* Row 2: filters + actions */}
           <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center" }}>
