@@ -56,8 +56,12 @@ export async function GET(req: NextRequest) {
 
   const searching = !!(q || categoryId || tag || expFilter);
   if (!searching) {
-    if (folderId === "root" || folderId === "") where.folderId = null;
-    else if (folderId) where.folderId = Number(folderId);
+    // null (no param) or "" or "root" all mean: show root-level docs only
+    if (!folderId || folderId === "" || folderId === "root") {
+      where.folderId = null;
+    } else {
+      where.folderId = Number(folderId);
+    }
   }
 
   const docs = await prisma.document.findMany({

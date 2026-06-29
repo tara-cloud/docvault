@@ -163,15 +163,22 @@ function DashboardInner() {
 
         {/* Search bar */}
         <form onSubmit={submitSearch} className="search-bar" style={{ marginBottom: 20 }}>
-          <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center" }}>
-            <div style={{ flex:1, minWidth:200, display:"flex" }}>
-              <label htmlFor="search-input" className="input-group-text"><i className="bi bi-search" /><span className="visually-hidden">Search</span></label>
+          {/* Row 1: search input full width */}
+          <div style={{ display:"flex", gap:8, marginBottom:8 }}>
+            <div style={{ flex:1, display:"flex" }}>
+              <label htmlFor="search-input" className="input-group-text">
+                <i className="bi bi-search" /><span className="visually-hidden">Search</span>
+              </label>
               <input ref={searchRef} id="search-input" className="form-control" type="text"
-                placeholder="Search… (/ to focus)" value={q} onChange={e => setQ(e.target.value)} />
+                placeholder="Search name, description, tags… (press / to focus)"
+                value={q} onChange={e => setQ(e.target.value)} />
             </div>
+          </div>
+          {/* Row 2: filters + actions */}
+          <div style={{ display:"flex", flexWrap:"wrap", gap:8, alignItems:"center" }}>
             <div>
               <label htmlFor="cat-filter" className="visually-hidden">Category</label>
-              <select id="cat-filter" className="form-select" style={{ minWidth:130 }}
+              <select id="cat-filter" className="form-select" style={{ minWidth:140 }}
                 value={catId} onChange={e => setCatId(e.target.value)}>
                 <option value="">All Categories</option>
                 {categories.map(c => <option key={c.id} value={String(c.id)}>{c.name}</option>)}
@@ -179,7 +186,7 @@ function DashboardInner() {
             </div>
             <div>
               <label htmlFor="exp-filter" className="visually-hidden">Expiry</label>
-              <select id="exp-filter" className="form-select" style={{ minWidth:140 }}
+              <select id="exp-filter" className="form-select" style={{ minWidth:150 }}
                 value={expFilter} onChange={e => setExpFilter(e.target.value)}>
                 <option value="">All Documents</option>
                 <option value="expiring">Expiring (90d)</option>
@@ -187,11 +194,11 @@ function DashboardInner() {
               </select>
             </div>
             <button type="submit" className="dv-btn-primary" style={{ padding:"6px 14px" }}>
-              <i className="bi bi-search" />
+              <i className="bi bi-search" /> Search
             </button>
             <button type="button" className="dv-btn-outline" style={{ padding:"6px 10px" }}
               onClick={() => { setQ(""); setCatId(""); setExpFilter(""); setFolderId(""); }}>
-              <i className="bi bi-x-lg" />
+              <i className="bi bi-x-lg" /> Clear
             </button>
             <div style={{ marginLeft:"auto", display:"flex", gap:8, alignItems:"center" }}>
               {data?.docs?.length ? (
@@ -243,11 +250,12 @@ function DashboardInner() {
                 onDragOver={e => { e.preventDefault(); }}
                 onDrop={e => { e.preventDefault(); if (dragDocId) moveDoc(dragDocId, dragDocName, sf.id); }}
               >
-                <button type="button" className="folder-card w-100 text-center py-3 px-2"
+                <button type="button" className="folder-card"
+                  style={{ width:"100%", padding:"16px 12px" }}
                   onClick={() => setFolderId(String(sf.id))}>
                   <div className="folder-icon"><i className="bi bi-folder-fill" /></div>
-                  <div style={{ fontSize:12, fontWeight:600, color:"var(--dv-text)", marginTop:6, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sf.name}</div>
-                  <div style={{ fontSize:11, color:"var(--dv-muted)" }}>{sf.docCount} doc{sf.docCount !== 1 ? "s" : ""}</div>
+                  <div style={{ fontSize:12, fontWeight:600, color:"var(--dv-text)", marginTop:8, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{sf.name}</div>
+                  <div style={{ fontSize:11, color:"var(--dv-muted)", marginTop:2 }}>{sf.docCount} doc{sf.docCount !== 1 ? "s" : ""}</div>
                 </button>
               </div>
             ))}
