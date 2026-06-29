@@ -105,7 +105,7 @@ export default function EditPage({ params }: Params) {
                 <textarea id="desc" className="form-control" rows={2} value={description} onChange={e => setDescription(e.target.value)} placeholder="Optional notes…" />
               </div>
 
-              <div style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
+              <div className="form-2col" style={{ display:"grid", gridTemplateColumns:"1fr 1fr", gap:14, marginBottom:14 }}>
                 <div>
                   <label className="form-label" htmlFor="folder-sel">Folder</label>
                   <select id="folder-sel" className="form-select" value={folderId} onChange={e => setFolderId(e.target.value)}>

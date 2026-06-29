@@ -71,7 +71,7 @@ export default function DocDetailPage({ params }: Params) {
           <h5 style={{ margin:0, fontWeight:700, overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap" }}>{doc.displayName}</h5>
         </div>
 
-        <div style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:16, alignItems:"start" }}>
+        <div className="preview-layout" style={{ display:"grid", gridTemplateColumns:"1fr 320px", gap:16, alignItems:"start" }}>
 
           {/* Preview */}
           <div className="card" style={{ overflow:"hidden" }}>
@@ -99,7 +99,7 @@ export default function DocDetailPage({ params }: Params) {
           </div>
 
           {/* Sidebar */}
-          <div className="card" style={{ padding:20, position:"sticky", top:80 }}>
+          <div className="card preview-sidebar" style={{ padding:20, position:"sticky", top:80 }}>
 
             {/* Category + expiry */}
             <div style={{ display:"flex", flexWrap:"wrap", gap:6, marginBottom:14 }}>
