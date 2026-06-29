@@ -6,9 +6,16 @@ import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import { ToastContainer, showToast } from "@/components/Toast";
 
+interface VersionSnapshot {
+  displayName?: string; description?: string | null;
+  categoryName?: string; folderName?: string | null;
+  tags?: string[]; expiryDate?: string | null;
+}
+
 interface Version {
   id: number; versionNum: number; fileExt: string; fileSizeHuman: string;
   mimeType: string; versionNote: string | null; replacedAt: string;
+  changeType: string; snapshot: string | null;
 }
 interface Doc {
   id: number; displayName: string; description: string | null;
@@ -54,6 +61,16 @@ export default function DocDetailPage({ params }: Params) {
     if (res.ok) { showToast("success", `Restored to v${verNum}.`); fetch(`/api/docs/${id}`).then(r => r.json()).then(setDoc); }
     else showToast("danger", "Restore failed.");
   }
+
+  async function handleDeleteVersion(verId: number) {
+    if (!doc) return;
+    if (!confirm("Delete this version from history? This cannot be undone.")) return;
+    const res = await fetch(`/api/docs/${doc.id}/versions/${verId}/restore`, { method: "DELETE" });
+    if (res.ok) { showToast("success", "Version deleted."); fetch(`/api/docs/${id}`).then(r => r.json()).then(setDoc); }
+    else showToast("danger", "Delete failed.");
+  }
+
+  const [previewVer, setPreviewVer] = useState<{ id: number; mime: string; name: string } | null>(null);
 
   if (!doc) return <div style={{ color:"var(--dv-muted)", padding:40 }}>Loading…</div>;
 
@@ -157,39 +174,117 @@ export default function DocDetailPage({ params }: Params) {
                 <hr style={{ borderColor:"var(--dv-border)", margin:"16px 0 12px" }} />
                 <div style={{ display:"flex", justifyContent:"space-between", marginBottom:8 }}>
                   <span style={{ fontSize:12, fontWeight:600, color:"var(--dv-muted)" }}>
-                    <i className="bi bi-clock-history me-1" />Version History
+                    <i className="bi bi-clock-history me-1" />Change History
                   </span>
                   <span style={{ fontSize:10, background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", borderRadius:4, padding:"1px 6px", color:"var(--dv-muted)" }}>
                     v{doc.versionNum} current
                   </span>
                 </div>
-                {doc.versions.map(v => (
-                  <div key={v.id} style={{ borderTop:"1px solid var(--dv-border)", padding:"8px 0", display:"flex", gap:8, alignItems:"flex-start" }}>
-                    <div style={{ flex:1 }}>
-                      <div style={{ fontSize:12, fontWeight:600, color:"var(--dv-text)" }}>
-                        v{v.versionNum} <span style={{ fontWeight:400, color:"var(--dv-muted)" }}>— {v.fileExt.slice(1).toUpperCase()} · {v.fileSizeHuman}</span>
+                {doc.versions.map(v => {
+                  const isMetadata = v.changeType === "metadata";
+                  const snap: VersionSnapshot | null = v.snapshot ? JSON.parse(v.snapshot) : null;
+                  return (
+                    <div key={v.id} style={{ borderTop:"1px solid var(--dv-border)", padding:"10px 0", display:"flex", gap:8, alignItems:"flex-start" }}>
+                      <div style={{ flex:1, minWidth:0 }}>
+                        <div style={{ display:"flex", alignItems:"center", gap:6, marginBottom:3 }}>
+                          <span style={{ fontSize:11, fontWeight:700, padding:"1px 6px", borderRadius:4,
+                            background: isMetadata ? "rgba(168,85,247,.15)" : "rgba(59,130,246,.15)",
+                            color: isMetadata ? "var(--dv-purple)" : "var(--dv-accent)" }}>
+                            {isMetadata ? "Metadata" : "File"}
+                          </span>
+                          <span style={{ fontSize:11, fontWeight:600, color:"var(--dv-text)" }}>v{v.versionNum}</span>
+                          <span style={{ fontSize:10, color:"var(--dv-muted)" }}>{v.replacedAt.slice(0,16).replace("T"," ")}</span>
+                        </div>
+
+                        {/* File change: show file info */}
+                        {!isMetadata && (
+                          <div style={{ fontSize:11, color:"var(--dv-muted)" }}>
+                            {v.fileExt.slice(1).toUpperCase()} · {v.fileSizeHuman}
+                          </div>
+                        )}
+
+                        {/* Metadata change: show what changed */}
+                        {isMetadata && snap && (
+                          <div style={{ fontSize:11, color:"var(--dv-muted)", display:"flex", flexDirection:"column", gap:2, marginTop:2 }}>
+                            {snap.displayName !== undefined && <span><strong>Name:</strong> {snap.displayName}</span>}
+                            {snap.categoryName !== undefined && <span><strong>Category:</strong> {snap.categoryName}</span>}
+                            {snap.folderName !== undefined && <span><strong>Folder:</strong> {snap.folderName ?? "Root"}</span>}
+                            {snap.tags !== undefined && snap.tags.length > 0 && (
+                              <span><strong>Tags:</strong> {snap.tags.join(", ")}</span>
+                            )}
+                            {snap.expiryDate !== undefined && (
+                              <span><strong>Expiry:</strong> {snap.expiryDate ?? "None"}</span>
+                            )}
+                          </div>
+                        )}
+
+                        {v.versionNote && (
+                          <div style={{ fontSize:11, fontStyle:"italic", color:"var(--dv-muted)", marginTop:2 }}>"{v.versionNote}"</div>
+                        )}
                       </div>
-                      <div style={{ fontSize:11, color:"var(--dv-muted)" }}>{v.replacedAt.slice(0,10)}</div>
-                      {v.versionNote && <div style={{ fontSize:11, fontStyle:"italic", color:"var(--dv-muted)", marginTop:2 }}>{v.versionNote}</div>}
+
+                      <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
+                        {!isMetadata && (
+                          <>
+                            {(v.mimeType === "application/pdf" || v.mimeType.startsWith("image/")) && (
+                              <button type="button"
+                                onClick={() => setPreviewVer({ id: v.id, mime: v.mimeType, name: `v${v.versionNum} — ${v.fileExt.slice(1).toUpperCase()}` })}
+                                style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
+                                title="Preview this version">
+                                <i className="bi bi-eye" />
+                              </button>
+                            )}
+                            <a href={`/api/docs/${doc.id}/versions/${v.id}/download`}
+                              style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-text)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, textDecoration:"none", display:"flex", alignItems:"center" }}
+                              title="Download this version">
+                              <i className="bi bi-download" />
+                            </a>
+                          </>
+                        )}
+                        <button type="button" onClick={() => handleRestore(v.id, v.versionNum)}
+                          style={{ background:"var(--dv-surface-2)", border:"1px solid rgba(59,130,246,.3)", color:"var(--dv-accent)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
+                          title={isMetadata ? "Restore this metadata state" : "Restore this file version"}>
+                          <i className="bi bi-arrow-counterclockwise" />
+                        </button>
+                        <button type="button" onClick={() => handleDeleteVersion(v.id)}
+                          style={{ background:"var(--dv-surface-2)", border:"1px solid rgba(239,68,68,.3)", color:"var(--dv-red)", borderRadius:"var(--dv-r)", padding:"4px 8px", fontSize:11, cursor:"pointer", display:"flex", alignItems:"center" }}
+                          title="Delete this version from history">
+                          <i className="bi bi-trash" />
+                        </button>
+                      </div>
                     </div>
-                    <div style={{ display:"flex", flexDirection:"column", gap:4, flexShrink:0 }}>
-                      <a href={`/api/docs/${doc.id}/versions/${v.id}/download`}
-                        style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-text)", borderRadius:"var(--dv-r)", padding:"3px 8px", fontSize:11, textDecoration:"none" }}>
-                        <i className="bi bi-download" />
-                      </a>
-                      <button type="button" onClick={() => handleRestore(v.id, v.versionNum)}
-                        style={{ background:"var(--dv-surface-2)", border:"1px solid rgba(59,130,246,.3)", color:"var(--dv-accent)", borderRadius:"var(--dv-r)", padding:"3px 8px", fontSize:11, cursor:"pointer" }}>
-                        <i className="bi bi-arrow-counterclockwise" />
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </>
             )}
           </div>
         </div>
       </main>
       <style>{`.dv-btn-primary{background:var(--dv-accent);border:none;color:#fff;padding:6px 14px;border-radius:var(--dv-r);font-weight:600;font-size:13px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}.dv-btn-outline{background:var(--dv-surface-2);border:1px solid var(--dv-border-2);color:var(--dv-subtle);padding:6px 10px;border-radius:var(--dv-r);cursor:pointer;font-size:13px;display:inline-flex;align-items:center;gap:4px}`}</style>
+
+      {/* Version preview modal */}
+      {previewVer && doc && (
+        <div style={{ position:"fixed", inset:0, zIndex:1000, background:"rgba(0,0,0,.8)", backdropFilter:"blur(8px)", display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}
+          onClick={() => setPreviewVer(null)}>
+          <div style={{ background:"var(--dv-surface)", border:"1px solid var(--dv-border)", borderRadius:"var(--dv-r-xl)", width:"min(90vw,1100px)", maxHeight:"90vh", display:"flex", flexDirection:"column" }}
+            onClick={e => e.stopPropagation()}>
+            <div style={{ display:"flex", alignItems:"center", gap:12, padding:"10px 16px", borderBottom:"1px solid var(--dv-border)" }}>
+              <span style={{ fontWeight:600, fontSize:14, flex:1 }}>{previewVer.name}</span>
+              <a href={`/api/docs/${doc.id}/versions/${previewVer.id}/download`}
+                style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border-2)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 10px", textDecoration:"none", fontSize:12 }}>
+                <i className="bi bi-download me-1" />Download
+              </a>
+              <button type="button" onClick={() => setPreviewVer(null)} style={{ background:"none", border:"none", color:"var(--dv-muted)", cursor:"pointer", fontSize:20, lineHeight:1 }}>×</button>
+            </div>
+            <div style={{ flex:1, overflow:"hidden", background:"var(--dv-surface-2)", display:"flex", alignItems:"center", justifyContent:"center" }}>
+              {previewVer.mime === "application/pdf"
+                ? <embed src={`/api/docs/${doc.id}/versions/${previewVer.id}/download`} type="application/pdf" style={{ width:"100%", height:"70vh", border:"none", display:"block" }} />
+                : <img src={`/api/docs/${doc.id}/versions/${previewVer.id}/download`} alt={previewVer.name} style={{ maxWidth:"100%", maxHeight:"70vh", objectFit:"contain" }} />
+              }
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

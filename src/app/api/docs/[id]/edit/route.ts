@@ -10,7 +10,10 @@ type Params = { params: Promise<{ id: string }> };
 
 export async function PATCH(req: NextRequest, { params }: Params) {
   const { id } = await params;
-  const doc = await prisma.document.findUnique({ where: { id: Number(id) } });
+  const doc = await prisma.document.findUnique({
+    where: { id: Number(id) },
+    include: { category: true, folder: true },
+  });
   if (!doc) return NextResponse.json({ error: "Not found" }, { status: 404 });
 
   try {
@@ -27,6 +30,19 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     let originalName = doc.originalName;
     let versionNum   = doc.versionNum;
     let newFileDest: string | null = null;
+    let changeType   = "metadata";
+
+    // Snapshot the current state before any changes
+    const snapshot = JSON.stringify({
+      displayName:  doc.displayName,
+      description:  doc.description,
+      categoryId:   doc.categoryId,
+      categoryName: doc.category.name,
+      folderId:     doc.folderId,
+      folderName:   doc.folder?.name ?? null,
+      tags:         parseTags(doc.tags),
+      expiryDate:   doc.expiryDate,
+    });
 
     const newFileEntry = formData.get("new_file");
     if (newFileEntry && typeof newFileEntry !== "string") {
@@ -34,29 +50,13 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       const ext  = path.extname(newFile.name).toLowerCase();
       const mime = ALLOWED_MIME[ext];
       if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
-
       if (newFile.size > 50 * 1024 * 1024) {
         return NextResponse.json({ error: "File exceeds 50 MB limit" }, { status: 413 });
       }
-
-      // Archive current version
-      await prisma.documentVersion.create({
-        data: {
-          documentId:   doc.id,
-          versionNum:   doc.versionNum,
-          uuid:         doc.uuid,
-          originalName: doc.originalName,
-          fileExt:      doc.fileExt,
-          fileSize:     doc.fileSize,
-          mimeType:     doc.mimeType,
-          versionNote:  f("version_note") || null,
-          replacedAt:   new Date().toISOString(),
-        },
-      });
-
-      uuid    = randomUUID();
-      fileExt = ext;
-      mimeType= mime;
+      changeType   = "file";
+      uuid         = randomUUID();
+      fileExt      = ext;
+      mimeType     = mime;
       originalName = newFile.name;
       versionNum++;
       fs.mkdirSync(UPLOAD_DIR, { recursive: true });
@@ -66,10 +66,31 @@ export async function PATCH(req: NextRequest, { params }: Params) {
       fileSize = buffer.length;
     }
 
+    // Always archive the previous state as a version
+    await prisma.documentVersion.create({
+      data: {
+        documentId:   doc.id,
+        versionNum:   doc.versionNum,
+        uuid:         doc.uuid,
+        originalName: doc.originalName,
+        fileExt:      doc.fileExt,
+        fileSize:     doc.fileSize,
+        mimeType:     doc.mimeType,
+        versionNote:  f("version_note") || null,
+        changeType,
+        snapshot,
+        replacedAt:   new Date().toISOString(),
+      },
+    });
+
+    // When only metadata changed, keep versionNum the same (file unchanged)
+    // When file changed, versionNum was already incremented above
+
     const updated = await prisma.document.update({
       where: { id: doc.id },
       data: {
-        uuid, fileExt, fileSize, mimeType, originalName, versionNum,
+        uuid, fileExt, fileSize, mimeType, originalName,
+        versionNum: changeType === "file" ? versionNum : doc.versionNum,
         displayName:  f("display_name") || doc.displayName,
         description:  f("description") || null,
         categoryId:   f("category_id") ? Number(f("category_id")) : doc.categoryId,
