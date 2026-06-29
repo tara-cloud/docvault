@@ -419,17 +419,14 @@ function DocCard({ doc, viewMode, onDelete, onDragStart, onQuickPreview, onMove,
         <Link href={`/doc/${doc.id}`} className="dv-btn-outline" style={{ flex:1, textAlign:"center", padding:"4px", textDecoration:"none", fontSize:12, display:"flex", alignItems:"center", justifyContent:"center", gap:4 }}>
           <i className="bi bi-eye" /> View
         </Link>
-        <a href={`/api/docs/${doc.id}/download`} className="dv-btn-outline" style={{ padding:"4px 8px", display:"flex", alignItems:"center" }}>
+        <a href={`/api/docs/${doc.id}/download`} className="dv-btn-outline" style={{ padding:"4px 8px", display:"flex", alignItems:"center" }}
+          title="Download">
           <i className="bi bi-download" />
         </a>
         <button type="button" onClick={() => setMoveOpen(true)}
           style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-subtle)", borderRadius:"var(--dv-r)", padding:"4px 8px", cursor:"pointer" }}
           title="Move to folder">
           <i className="bi bi-folder-symlink" />
-        </button>
-        <button type="button" onClick={() => onDelete(doc.id, doc.displayName)}
-          style={{ background:"var(--dv-surface-2)", border:"1px solid var(--dv-border)", color:"var(--dv-red)", borderRadius:"var(--dv-r)", padding:"4px 8px", cursor:"pointer" }}>
-          <i className="bi bi-trash" />
         </button>
       </div>
 
