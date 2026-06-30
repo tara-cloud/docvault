@@ -82,21 +82,24 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     }
 
     // Always archive the previous state as a version
-    await prisma.documentVersion.create({
-      data: {
-        documentId:   doc.id,
-        versionNum:   doc.versionNum,
-        uuid:         doc.uuid,
-        originalName: doc.originalName,
-        fileExt:      doc.fileExt,
-        fileSize:     doc.fileSize,
-        mimeType:     doc.mimeType,
-        versionNote:  f("version_note") || null,
-        changeType,
-        snapshot,
-        replacedAt:   new Date().toISOString(),
-      },
-    });
+    // Use raw SQL with fallback: try with new columns, fall back without them
+    const replacedAt = new Date().toISOString();
+    try {
+      await prisma.$executeRaw`
+        INSERT INTO document_versions
+          (document_id, version_num, uuid, original_name, file_ext, file_size, mime_type, version_note, change_type, snapshot, replaced_at)
+        VALUES
+          (${doc.id}, ${doc.versionNum}, ${doc.uuid}, ${doc.originalName}, ${doc.fileExt}, ${doc.fileSize}, ${doc.mimeType}, ${f("version_note") || null}, ${changeType}, ${snapshot}, ${replacedAt})
+      `;
+    } catch {
+      // Fallback: insert without new columns (migration not yet run)
+      await prisma.$executeRaw`
+        INSERT INTO document_versions
+          (document_id, version_num, uuid, original_name, file_ext, file_size, mime_type, version_note, replaced_at)
+        VALUES
+          (${doc.id}, ${doc.versionNum}, ${doc.uuid}, ${doc.originalName}, ${doc.fileExt}, ${doc.fileSize}, ${doc.mimeType}, ${f("version_note") || null}, ${replacedAt})
+      `;
+    }
 
     // When only metadata changed, keep versionNum the same (file unchanged)
     // When file changed, versionNum was already incremented above
