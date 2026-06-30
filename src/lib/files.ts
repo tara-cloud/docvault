@@ -6,15 +6,41 @@ export const UPLOAD_DIR = process.env.UPLOAD_DIR ?? "/data/uploads";
 export const BACKUP_DIR = process.env.BACKUP_DIR ?? "/backup/docvault";
 export const DB_PATH    = process.env.DATABASE_URL?.replace("file:", "") ?? "/data/docvault.db";
 
-export const ALLOWED_MIME: Record<string, string> = {
+// Common MIME types by extension — used for preview detection
+// All file types are accepted; unknown extensions get application/octet-stream
+const MIME_MAP: Record<string, string> = {
   ".pdf":  "application/pdf",
   ".png":  "image/png",
   ".jpg":  "image/jpeg",
   ".jpeg": "image/jpeg",
   ".gif":  "image/gif",
   ".webp": "image/webp",
+  ".avif": "image/avif",
+  ".bmp":  "image/bmp",
+  ".svg":  "image/svg+xml",
   ".docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  ".doc":  "application/msword",
+  ".xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  ".xls":  "application/vnd.ms-excel",
+  ".pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation",
+  ".ppt":  "application/vnd.ms-powerpoint",
+  ".txt":  "text/plain",
+  ".csv":  "text/csv",
+  ".mp4":  "video/mp4",
+  ".mov":  "video/quicktime",
+  ".mp3":  "audio/mpeg",
+  ".zip":  "application/zip",
+  ".rar":  "application/x-rar-compressed",
+  ".7z":   "application/x-7z-compressed",
 };
+
+/** Returns MIME type for any file extension. Falls back to octet-stream. */
+export function getMimeType(ext: string): string {
+  return MIME_MAP[ext.toLowerCase()] ?? "application/octet-stream";
+}
+
+// Keep ALLOWED_MIME for backwards compatibility (preview detection)
+export const ALLOWED_MIME = MIME_MAP;
 
 export function docPath(uuid: string, ext: string): string {
   return path.join(UPLOAD_DIR, `${uuid}${ext}`);

@@ -102,12 +102,23 @@ function UploadInner() {
     xhr.send(fd);
   }
 
-  const MIME_ICONS: Record<string, string> = { pdf:"file-earmark-pdf-fill", image:"file-earmark-image-fill", docx:"file-earmark-word-fill" };
-  const MIME_COLORS: Record<string, string> = { pdf:"var(--dv-red)", image:"var(--dv-green)", docx:"var(--dv-accent)" };
+  const MIME_ICONS: Record<string, string> = {
+    pdf:"file-earmark-pdf-fill", image:"file-earmark-image-fill",
+    docx:"file-earmark-word-fill", spreadsheet:"file-earmark-spreadsheet-fill",
+    zip:"file-earmark-zip-fill", text:"file-earmark-text-fill",
+  };
+  const MIME_COLORS: Record<string, string> = {
+    pdf:"var(--dv-red)", image:"var(--dv-green)", docx:"var(--dv-accent)",
+    spreadsheet:"#16a34a", zip:"var(--dv-yellow)", text:"var(--dv-muted)",
+  };
   function getType(name: string) {
     const ext = name.split(".").pop()?.toLowerCase();
     if (ext === "pdf") return "pdf";
-    if (["png","jpg","jpeg","gif","webp"].includes(ext ?? "")) return "image";
+    if (["png","jpg","jpeg","gif","webp","avif","bmp","svg"].includes(ext ?? "")) return "image";
+    if (["doc","docx","ppt","pptx","odt"].includes(ext ?? "")) return "docx";
+    if (["xls","xlsx","csv","ods"].includes(ext ?? "")) return "spreadsheet";
+    if (["zip","rar","7z","tar","gz"].includes(ext ?? "")) return "zip";
+    if (["txt","md","log","xml","json","yaml","yml"].includes(ext ?? "")) return "text";
     if (ext === "docx") return "docx";
     return "other";
   }
@@ -152,7 +163,6 @@ function UploadInner() {
                   onClick={() => fileRef.current?.click()}
                 >
                   <input ref={fileRef} type="file" style={{ display:"none" }}
-                    accept=".pdf,.png,.jpg,.jpeg,.gif,.webp,.docx"
                     onChange={e => { if (e.target.files?.[0]) onFileChange(e.target.files[0]); }} />
                   <i className={`bi bi-${file ? `${MIME_ICONS[getType(file.name)]}` : "cloud-arrow-up-fill"} upload-icon d-block`}
                     style={{ color: file ? (MIME_COLORS[getType(file.name)] ?? "var(--dv-green)") : undefined }} />
@@ -160,7 +170,7 @@ function UploadInner() {
                     {file ? file.name : "Drop file here or click to browse"}
                   </div>
                   <div style={{ fontSize:12, color:"var(--dv-muted)", marginTop:4 }}>
-                    {file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : "PDF, PNG, JPG, GIF, WEBP, DOCX — max 100 MB"}
+                    {file ? `${(file.size / 1024 / 1024).toFixed(1)} MB` : "Any file format — max 100 MB"}
                   </div>
                 </div>
                 {file && (
