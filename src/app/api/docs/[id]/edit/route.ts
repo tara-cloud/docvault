@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
-import { ALLOWED_MIME, UPLOAD_DIR, docPath } from "@/lib/files";
+import { getMimeType, UPLOAD_DIR, docPath } from "@/lib/files";
 import { normalizeTags, humanSize, parseTags, computeExpiry } from "@/lib/utils";
 import { randomUUID } from "crypto";
 import fs from "fs";
@@ -49,9 +49,9 @@ export async function PATCH(req: NextRequest, { params }: Params) {
     const newFileEntry = formData.get("new_file");
     if (newFileEntry && typeof newFileEntry !== "string") {
       const newFile = newFileEntry as File;
-      const ext  = path.extname(newFile.name).toLowerCase();
-      const mime = ALLOWED_MIME[ext];
-      if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+      const ext  = path.extname(newFile.name).toLowerCase() || ".bin";
+      const mime = getMimeType(ext);
+      // No file type restriction
       if (newFile.size > 100 * 1024 * 1024) {
         return NextResponse.json({ error: "File exceeds 100 MB limit" }, { status: 413 });
       }

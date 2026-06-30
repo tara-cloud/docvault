@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/db";
 import { normalizeTags, parseTags, computeExpiry, humanSize } from "@/lib/utils";
-import { ALLOWED_MIME, UPLOAD_DIR, docPath } from "@/lib/files";
+import { getMimeType, UPLOAD_DIR, docPath } from "@/lib/files";
 import { randomUUID } from "crypto";
 import fs from "fs";
 import path from "path";
@@ -105,9 +105,9 @@ export async function POST(req: NextRequest) {
     }
     const file = fileEntry as File;
 
-    const ext  = path.extname(file.name).toLowerCase();
-    const mime = ALLOWED_MIME[ext];
-    if (!mime) return NextResponse.json({ error: "File type not allowed" }, { status: 400 });
+    const ext  = path.extname(file.name).toLowerCase() || ".bin";
+    const mime = getMimeType(ext);
+    // No file type restriction — accept any format
 
     if (file.size > 100 * 1024 * 1024) {
       return NextResponse.json({ error: "File exceeds 100 MB limit" }, { status: 413 });
