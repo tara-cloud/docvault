@@ -47,7 +47,28 @@ function DashboardInner() {
   const [q, setQ]               = useState(sp.get("q") ?? "");
   const [catId, setCatId]       = useState(sp.get("category_id") ?? "");
   const [expFilter, setExpFilter]= useState(sp.get("expiry_filter") ?? "");
-  const [folderId, setFolderId] = useState<string>(sp.get("folder_id") ?? "");
+  const [folderId, setFolderIdState] = useState<string>(() => {
+    // Priority: URL param > localStorage > root
+    const fromUrl = sp.get("folder_id") ?? "";
+    if (fromUrl) return fromUrl;
+    if (typeof window !== "undefined") return localStorage.getItem("dv_folder") ?? "";
+    return "";
+  });
+
+  // Keep URL and localStorage in sync whenever folder changes
+  function setFolderId(id: string) {
+    setFolderIdState(id);
+    if (typeof window !== "undefined") {
+      if (id) localStorage.setItem("dv_folder", id);
+      else localStorage.removeItem("dv_folder");
+    }
+    // Update URL so Back button returns to the same folder
+    const params = new URLSearchParams(window.location.search);
+    if (id) params.set("folder_id", id);
+    else params.delete("folder_id");
+    const newUrl = params.toString() ? `/?${params}` : "/";
+    router.replace(newUrl, { scroll: false });
+  }
   const [breadcrumb, setBreadcrumb] = useState<{ id: number; name: string }[]>([]);
   const [dragDocId, setDragDocId]       = useState<number | null>(null);
   const [dragDocName, setDragDocName]   = useState("");
